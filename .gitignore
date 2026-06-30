@@ -1,0 +1,13 @@
+# 의존성 (npm install로 복원)
+node_modules/
+
+# 빌드 산출물
+dist/
+
+# 런타임 데이터(설정/캐시) — 사용자별 생성
+userdata/
+data/
+
+# 로그
+electron.log
+*.log

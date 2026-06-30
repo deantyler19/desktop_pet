@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px 18px;
+    font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    background: #f7f4ef; color: #3a2a23;
+  }
+  h1 { font-size: 17px; margin: 0 0 12px; font-weight: 600; }
+  h2 { font-size: 12px; color: #7a6a60; margin: 4px 0 8px; font-weight: 600; }
+
+  /* 새 알람 추가 폼 */
+  .add { background: #fff; border: 1px solid #e5ddd2; border-radius: 12px; padding: 12px; }
+  .add .line { display: flex; gap: 8px; align-items: center; }
+  .add .line + .line { margin-top: 8px; }
+  input[type=time], input[type=text], select {
+    padding: 7px 9px; font-size: 14px;
+    border: 1px solid #d8cfc4; border-radius: 8px; background: #fff; color: #3a2a23;
+  }
+  input[type=time] { flex: 1; min-width: 0; }
+  select { flex: none; width: 110px; }
+  input[type=text] { flex: 1; min-width: 0; }
+  input:focus, select:focus { outline: none; border-color: #bf5e3b; }
+  .addbtn {
+    width: 100%; margin-top: 10px; padding: 8px 0; font-size: 13px; font-weight: 600;
+    border: none; border-radius: 8px; cursor: pointer; background: #bf5e3b; color: #fff;
+  }
+  .addbtn:hover { background: #a44d2f; }
+
+  /* 알람 목록 */
+  #list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px;
+    max-height: 230px; overflow-y: auto; }
+  .item {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border: 1px solid #e5ddd2; border-radius: 10px; padding: 9px 11px;
+  }
+  .item.off { opacity: .5; }
+  .item .sw { flex: none; }
+  .item .info { flex: 1; min-width: 0; }
+  .item .time { font-size: 16px; font-weight: 700; letter-spacing: .5px; }
+  .item .meta { font-size: 11px; color: #8a7a70; margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px;
+    border-radius: 6px; vertical-align: middle; }
+  .tag.rep { background: #e7f0e3; color: #4a7a3a; }
+  .tag.once { background: #f0e6e0; color: #a44d2f; }
+  .del { flex: none; border: none; background: none; cursor: pointer;
+    font-size: 16px; color: #b09a8c; padding: 2px 4px; border-radius: 6px; }
+  .del:hover { background: #f0e6e0; color: #a44d2f; }
+  /* 토글 스위치 */
+  .toggle { position: relative; width: 38px; height: 22px; flex: none; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background: #d8cfc4; border-radius: 22px;
+    transition: .2s; cursor: pointer; }
+  .slider::before { content: ""; position: absolute; left: 3px; top: 3px;
+    width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: .2s; }
+  .toggle input:checked + .slider { background: #bf5e3b; }
+  .toggle input:checked + .slider::before { transform: translateX(16px); }
+
+  #empty { font-size: 12px; color: #a09080; text-align: center; padding: 18px 0; }
+  .row { display: flex; gap: 8px; margin-top: 14px; }
+  .closebtn { flex: 1; padding: 8px 0; font-size: 13px; font-weight: 600;
+    border: none; border-radius: 8px; cursor: pointer; background: #ece5dc; color: #6a5a50; }
+  .closebtn:hover { background: #e0d7cc; }
+</style>
+</head>
+<body>
+  <h1>⏰ 알람</h1>
+
+  <div class="add">
+    <h2>새 알람 추가</h2>
+    <div class="line">
+      <input type="time" id="time" />
+      <select id="repeat">
+        <option value="true">매일 반복</option>
+        <option value="false">한 번만</option>
+      </select>
+    </div>
+    <div class="line">
+      <input type="text" id="text" maxlength="30" placeholder="알림 내용 (예: 회의 시작! / 약 먹기)" />
+    </div>
+    <button class="addbtn" id="add">+ 추가</button>
+  </div>
+
+  <div id="list"></div>
+  <div id="empty">설정된 알람이 없어요.</div>
+
+  <div class="row">
+    <button class="closebtn" id="close">닫기</button>
+  </div>
+
+<script>
+  const $time = document.getElementById('time');
+  const $repeat = document.getElementById('repeat');
+  const $text = document.getElementById('text');
+  const $list = document.getElementById('list');
+  const $empty = document.getElementById('empty');
+
+  let alarms = [];
+
+  function persist() { window.petAPI?.setAlarms?.(alarms.map(a => ({
+    time: a.time, text: a.text, repeat: a.repeat, enabled: a.enabled,
+  }))); }
+
+  function render() {
+    $list.innerHTML = '';
+    // 시간순 정렬
+    const sorted = [...alarms].sort((a, b) => a.time.localeCompare(b.time));
+    $empty.style.display = sorted.length ? 'none' : 'block';
+    for (const a of sorted) {
+      const idx = alarms.indexOf(a);
+      const item = document.createElement('div');
+      item.className = 'item' + (a.enabled ? '' : ' off');
+
+      const tag = a.repeat ? '<span class="tag rep">매일</span>' : '<span class="tag once">한 번</span>';
+      const txt = a.text ? ' · ' + escapeHtml(a.text) : '';
+      item.innerHTML =
+        '<label class="toggle"><input type="checkbox" ' + (a.enabled ? 'checked' : '') + '>' +
+        '<span class="slider"></span></label>' +
+        '<div class="info"><div class="time">' + a.time + '</div>' +
+        '<div class="meta">' + tag + txt + '</div></div>' +
+        '<button class="del" title="삭제">🗑️</button>';
+
+      item.querySelector('input').addEventListener('change', (e) => {
+        alarms[idx].enabled = e.target.checked; persist(); render();
+      });
+      item.querySelector('.del').addEventListener('click', () => {
+        alarms.splice(idx, 1); persist(); render();
+      });
+      $list.appendChild(item);
+    }
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  document.getElementById('add').addEventListener('click', () => {
+    if (!$time.value) { $time.focus(); return; }
+    alarms.push({
+      time: $time.value,
+      text: $text.value.trim().slice(0, 30),
+      repeat: $repeat.value === 'true',
+      enabled: true,
+    });
+    $text.value = '';
+    persist();
+    render();
+  });
+  $text.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('add').click(); });
+  document.getElementById('close').addEventListener('click', () => window.petAPI?.closeAlarmWin?.());
+
+  (async () => {
+    const a = await window.petAPI?.getAlarms?.();
+    alarms = Array.isArray(a) ? a.map(x => ({
+      time: x.time, text: x.text || '', repeat: x.repeat !== false, enabled: x.enabled !== false,
+    })) : [];
+    render();
+  })();
+</script>
+</body>
+</html>

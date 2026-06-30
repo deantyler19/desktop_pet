@@ -1,0 +1,46 @@
+{
+  "name": "claude-pet",
+  "version": "0.1.0",
+  "description": "A floating Claude desktop pet",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder && node seticon.js"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "rcedit": "^5.0.2"
+  },
+  "dependencies": {
+    "koffi": "^3.0.2"
+  },
+  "build": {
+    "appId": "com.ekgames.dot",
+    "productName": "Dot",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!userdata${/*}",
+      "!data${/*}",
+      "!electron.log"
+    ],
+    "asarUnpack": [
+      "**/node_modules/koffi/**"
+    ],
+    "win": {
+      "target": "dir",
+      "signAndEditExecutable": false,
+      "icon": "icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.utilities"
+    }
+  }
+}

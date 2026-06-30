@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<style>
+  :root { --coral: #bf5e3b; --coral-dark: #a44d2f; --eye: #161616; }
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+  html, body {
+    width: 100%; height: 100%;
+    background: transparent; overflow: hidden;
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    cursor: default;
+  }
+  #pet { position: absolute; inset: 0; cursor: grab; }
+  #pet.held { cursor: grabbing; }
+  /* 펫 그림은 창 하단 120x100 영역에 고정 (위쪽은 말풍선 공간) */
+  #petbox { position: absolute; left: 0; bottom: 0; width: 120px; height: 100px; }
+
+  /* 위아래 흔들림 / 걷기 (몸통) */
+  #body-wrap {
+    width: 100%; height: 100%;
+    transform-origin: 50% 92%;
+    animation: breathe 3.4s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%,100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-2px) scale(1.01); }
+  }
+  /* 걸을 때 뒤뚱뒤뚱 */
+  #pet.walking #body-wrap { animation: walk .44s ease-in-out infinite; }
+  @keyframes walk {           /* 몸통: 발걸음에 맞춰 가볍게 통통 + 살짝 뒤뚱 */
+    0%,100% { transform: translateY(0) rotate(-2deg); }
+    50%     { transform: translateY(-2px) rotate(2deg); }
+  }
+  /* 다리 좌/우 교대 스텝 (걸어다니는 느낌) */
+  #pet.walking .leg-l { animation: stepL .44s ease-in-out infinite; }
+  #pet.walking .leg-r { animation: stepR .44s ease-in-out infinite; }
+  @keyframes stepL { 0%,100% { transform: translateY(-4px); } 50% { transform: translateY(0); } }
+  @keyframes stepR { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  /* 신난 점프 */
+  #pet.happy #body-wrap { animation: hop .5s ease; }
+  @keyframes hop {
+    0%,100% { transform: translateY(0); }
+    35% { transform: translateY(-14px) scaleX(.97); }
+    70% { transform: translateY(0) scaleY(.92) scaleX(1.05); }
+  }
+  /* 떨어질 때 살짝 길쭉 */
+  #pet.falling #body-wrap { animation: none; transform: scaleY(1.06) scaleX(.95); }
+
+  /* 바라보는 방향 뒤집기 (얼굴 유지용 내부 래퍼) */
+  #flip { width: 100%; height: 100%; transition: transform .15s; }
+
+  #face-hit {
+    position: absolute; left: 30px; bottom: 5px;
+    width: 60px; height: 58px;
+    cursor: pointer; z-index: 5;
+  }
+  svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  svg rect { shape-rendering: crispEdges; }
+
+  .eye-lid {
+    transform-box: fill-box; transform-origin: center;
+    animation: blink 4.8s infinite;
+  }
+  @keyframes blink {
+    0%,92%,100% { transform: scaleY(0); }
+    95%,97% { transform: scaleY(1); }
+  }
+
+  /* 말풍선: 펫 머리 바로 위(살짝 우측)에 붙이고 꼬리로 연결 */
+  #bubble {
+    position: absolute; left: 44px; bottom: 56px;
+    transform: scale(0.6); transform-origin: bottom left;
+    background: #fff; color: #3a2a23;
+    padding: 6px 11px; border-radius: 13px;
+    font-size: 13px; font-weight: 600;
+    max-width: 144px; white-space: normal; text-align: center; word-break: keep-all;
+    line-height: 1.38; text-wrap: balance;
+    box-shadow: 0 3px 10px rgba(0,0,0,.2);
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s, transform .2s;
+  }
+  #bubble.show { opacity: 1; transform: scale(1); }
+  #bubble::after {   /* 꼬리: 펫 머리를 향해 아래로 */
+    content: ""; position: absolute; bottom: -6px; left: 14px;
+    border: 6px solid transparent; border-top-color: #fff; border-bottom: 0;
+  }
+  /* 화면 오른쪽 끝에선 왼쪽으로 펼침 (잘림 방지) */
+  #bubble.left { left: auto; right: 116px; transform-origin: bottom right; }
+  #bubble.left::after { left: auto; right: 14px; }
+
+  .heart {
+    position: absolute; font-size: 14px; pointer-events: none;
+    animation: floatUp 1s ease-out forwards;
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(.6); }
+    100% { opacity: 0; transform: translateY(-34px) scale(1.2); }
+  }
+</style>
+</head>
+<body>
+  <div id="pet">
+    <div id="bubble"></div>
+    <div id="face-hit"></div>
+    <div id="petbox"><div id="body-wrap"><div id="flip">
+      <svg id="art" viewBox="0 0 120 100"></svg>
+    </div></div></div>
+  </div>
+
+<script>
+  // ── 스킨 정의 (픽셀 도트) ──────────────────────
+  // 문자 → 팔레트 색. 'K'=눈(검정, 깜빡임 적용). '.'/' '=빈칸.
+  const K = '#161616';
+  const SKINS = {
+    claude: {
+      pal: { C: '#bf5e3b', K }, eyelid: '#bf5e3b',
+      grid: [
+        "..CCCCCCCCCC..", ".CCCCCCCCCCCC.", ".CCKKCCCCKKCC.", ".CCKKCCCCKKCC.",
+        "CCCCCCCCCCCCCC", ".CCCCCCCCCCCC.", ".CCCCCCCCCCCC.", "...CC....CC...", "...CC....CC...",
+      ],
+    },
+    cat: {
+      pal: { 1: '#9b9ea3', 2: '#e88aa0', 3: '#cf6076', K }, eyelid: '#9b9ea3',
+      grid: [
+        ".11........11.", ".22........22.", "..1111111111..", ".111111111111.",
+        "111KK1111KK111", "111KK1111KK111", "11111133111111", ".111111111111.",
+        "...11....11...", "...11....11...",
+      ],
+    },
+    dog: {
+      pal: { 1: '#b5824f', 2: '#6f4a2b', 3: K, K }, eyelid: '#b5824f',
+      grid: [
+        "222........222", "2221......1222", "22111111111122", "22111111111122",
+        "111KK1111KK111", "111KK1111KK111", "11111133111111", ".111111111111.",
+        "...11....11...", "...11....11...",
+      ],
+    },
+    hamster: {
+      pal: { 1: '#d8a25e', 2: '#f3e2c4', K }, eyelid: '#d8a25e',
+      grid: [
+        "..11......11..", "..1111111111..", ".111111111111.", "11111111111111",
+        "111KK1111KK111", "111KK1111KK111", "11222222222211", "11222222222211",
+        "11222222222211", "...11....11...", "...11....11...",
+      ],
+    },
+    penguin: {
+      // 1=검정 몸, 2=흰 배, 3=주황 부리/발, K=눈
+      pal: { 1: '#2e2e38', 2: '#f5f5f5', 3: '#f0a030', K }, eyelid: '#f5f5f5',
+      grid: [
+        "..1111111111..", ".111111111111.", "11111111111111",
+        "11222222222211", "112KK2222KK211", "11222233222211",
+        "11222222222211", "11222222222211", "11222222222211",
+        ".112222222211.", "...33....33...",
+      ],
+    },
+    rabbit: {
+      // 1=흰 몸, 3=분홍 귀안/코, K=눈
+      pal: { 1: '#f3f3f3', 3: '#f2a0b0', K }, eyelid: '#f3f3f3',
+      grid: [
+        "....11..11....", "....33..33....", "....11..11....",
+        "..1111111111..", ".111111111111.", "11111111111111",
+        "111KK1111KK111", "111KK1111KK111", "11111133111111",
+        ".111111111111.", "...11....11...", "...11....11...",
+      ],
+    },
+    panda: {
+      // 1=흰 몸, 2=검정 귀/눈가/팔, W=눈 하이라이트
+      pal: { 1: '#f3f3f3', 2: '#2e2e38', W: '#ffffff' }, eyelid: '#f3f3f3',
+      grid: [
+        ".22........22.", "..1111111111..", ".111111111111.",
+        "11111111111111", "112W211112W211", "112W211112W211",
+        "11111122111111", "11111111111111", "22111111111122",
+        "22111111111122", "...22....22...", "...22....22...",
+      ],
+    },
+
+    chick: {
+      pal: { 1: '#ffd83d', 3: '#f08a30', K }, eyelid: '#ffd83d',
+      grid: [
+        "..1111111111..", ".111111111111.", "11111111111111", "111KK1111KK111",
+        "111KK1111KK111", "11111133111111", "11111111111111", ".111111111111.",
+        ".111111111111.", "...33....33...",
+      ],
+    },
+    bear: {
+      pal: { 1: '#9c6b43', 2: '#c89a6f', 3: '#3a241c', K }, eyelid: '#9c6b43',
+      grid: [
+        ".11........11.", "..1111111111..", ".111111111111.", "11111111111111",
+        "111KK1111KK111", "111KK1111KK111", "11112222221111", "11112233221111",
+        ".111111111111.", "...11....11...", "...11....11...",
+      ],
+    },
+    fox: {
+      pal: { 1: '#df6234', 2: '#f5f0e8', 3: '#3a241c', K }, eyelid: '#df6234',
+      grid: [
+        ".11........11.", ".11........11.", "..1111111111..", ".111111111111.",
+        "11111111111111", "111KK1111KK111", "11222222222211", "11222233222211",
+        ".112222222211.", "...11....11...", "...11....11...",
+      ],
+    },
+    capybara: {
+      // 1=갈색 몸, 2=밝은 주둥이, 3=어두운 코, K=눈
+      pal: { 1: '#a87a4e', 2: '#caa478', 3: '#5a4632', K }, eyelid: '#a87a4e',
+      grid: [
+        ".11........11.", "..1111111111..", ".111111111111.", "11111111111111",
+        "111KK1111KK111", "11111111111111", "11222222222211", "11222333322211",
+        ".112222222211.", "...11....11...", "...11....11...",
+      ],
+    },
+    duck: {
+      // 1=노란 몸, 2=주황 부리/발, K=눈
+      pal: { 1: '#ffd23d', 2: '#f5a623', K }, eyelid: '#ffd23d',
+      grid: [
+        "..1111111111..", ".111111111111.", "11111111111111", "111KK1111KK111",
+        "11111111111111", "11112222221111", "11111111111111", ".111111111111.",
+        "...22....22...",
+      ],
+    },
+    frog: {
+      pal: { 1: '#6abf4b', 2: '#eaf3d8', 3: '#3f8a2e', K }, eyelid: '#6abf4b',
+      grid: [
+        "..11....11....", "..KK....KK....", "..1111111111..", ".111111111111.",
+        "11111111111111", "11333333333311", "11222222222211", ".112222222211.",
+        "...11....11...", "...11....11...",
+      ],
+    },
+    ghost: {
+      pal: { 1: '#eef0f5', K }, eyelid: '#eef0f5',
+      grid: [
+        "..1111111111..", ".111111111111.", "11111111111111", "111KK1111KK111",
+        "111KK1111KK111", "11111111111111", "11111111111111", ".111111111111.",
+        "11.11.11.11.11",
+      ],
+    },
+  };
+
+  const S = 6;
+  const NS = "http://www.w3.org/2000/svg";
+  const art = document.getElementById('art');
+
+  // 펫을 60% 크기로 그리는 그룹 (창은 그대로, 캐릭터만 40% 축소)
+  const pixgroup = document.createElementNS(NS, 'g');
+  pixgroup.setAttribute('transform', 'translate(24,37.6) scale(0.6)');
+  art.appendChild(pixgroup);
+
+  function rectInto(g, x, y, w, h, fill, cls) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('fill', fill);
+    if (cls) r.setAttribute('class', cls);
+    g.appendChild(r);
+  }
+  function mkG(cls) {
+    const g = document.createElementNS(NS, 'g');
+    if (cls) g.setAttribute('class', cls);
+    pixgroup.appendChild(g);
+    return g;
+  }
+
+  let curSkin = 'claude';
+  function render(name) {
+    const sk = SKINS[name] || SKINS.claude;
+    curSkin = SKINS[name] ? name : 'claude';
+    const grid = sk.grid, rows = grid.length, cols = grid[0].length;
+    const OX = 60 - cols * S / 2;     // 가로 가운데
+    const OY = 94 - rows * S;         // 발끝을 항상 같은 바닥(y≈94)에 맞춤
+    while (pixgroup.firstChild) pixgroup.removeChild(pixgroup.firstChild);
+
+    // 다리 행 판별: 맨 아래 3행 중 '다리 덩어리가 2개 이상'인 행 = 걸을 때 움직일 부분
+    const legRow = {};
+    for (let r = rows - 1; r >= Math.max(0, rows - 3); r--) {
+      if ((grid[r].match(/[^.\s]+/g) || []).length >= 2) legRow[r] = true;
+    }
+
+    const shadowG = mkG();
+    rectInto(shadowG, OX + cols * S * 0.18, 96, cols * S * 0.64, 5, 'rgba(0,0,0,.12)');
+    const legLG = mkG('leg-l'), legRG = mkG('leg-r'), bodyG = mkG();   // 왼다리/오른다리/몸통
+
+    const eyes = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const ch = grid[r][c];
+        if (ch === '.' || ch === ' ') continue;
+        const g = legRow[r] ? (c < cols / 2 ? legLG : legRG) : bodyG;
+        rectInto(g, OX + c * S, OY + r * S, S + 0.6, S + 0.6, sk.pal[ch] || '#000');
+        if (ch === 'K') eyes.push([c, r]);
+      }
+    }
+    for (const [c, r] of eyes)   // 깜빡임 덮개
+      rectInto(bodyG, OX + c * S, OY + r * S, S + 0.6, S + 0.6, sk.eyelid, 'eye-lid');
+  }
+  render('claude');
+
+  // ── 행동 ───────────────────────────────────────
+  const pet = document.getElementById('pet');
+  const flip = document.getElementById('flip');
+  const faceHit = document.getElementById('face-hit');
+  const bubble = document.getElementById('bubble');
+  let curMode = 'idle';
+
+  // 이모지/이모티콘 제거 — 말풍선엔 텍스트만 (그림문자 + 변형선택자 ️ + ZWJ ‍ + 키캡 ⃣)
+  const EMOJI_RE = /[\p{Extended_Pictographic}️‍⃣]/gu;
+  function stripEmoji(t) {
+    return t.replace(EMOJI_RE, '').replace(/\s+/g, ' ').trim();
+  }
+  function say(text, ms = 1500) {
+    const t = stripEmoji(text);
+    if (!t) return;                 // 이모지만 있던 메시지는 건너뜀
+    bubble.textContent = t;
+    // 창이 화면 오른쪽 끝이면 말풍선을 왼쪽으로 (안 잘리게)
+    const sw = (window.screen && window.screen.availWidth) || 1920;
+    bubble.classList.toggle('left', (window.screenX + (window.innerWidth || 190) + 10) > sw);
+    bubble.classList.add('show');
+    clearTimeout(say._t);
+    say._t = setTimeout(() => bubble.classList.remove('show'), ms);
+  }
+  function hop() {
+    pet.classList.remove('happy');
+    void pet.offsetWidth;
+    pet.classList.add('happy');
+    setTimeout(() => pet.classList.remove('happy'), 520);
+  }
+  function heart() {
+    const h = document.createElement('div');
+    h.className = 'heart';
+    h.textContent = ['❤️', '🧡', '💛', '✨'][Math.floor(Math.random() * 4)];
+    h.style.left = (40 + Math.random() * 26) + 'px';
+    h.style.bottom = '58px';
+    pet.appendChild(h);
+    setTimeout(() => h.remove(), 1000);
+  }
+
+  // 드래그로 옮기기 — 포인터 캡처로 커서가 창 밖으로 나가도 끝까지 추적/종료
+  let down = null, moved = false;
+  pet.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    try { pet.setPointerCapture(e.pointerId); } catch {}
+    down = { id: e.pointerId, gx: e.clientX, gy: e.clientY, sx: e.screenX, sy: e.screenY };
+    moved = false;
+    pet.classList.add('held');
+    window.petAPI?.dragStart();
+  });
+  pet.addEventListener('pointermove', (e) => {
+    if (!down) return;
+    if (Math.abs(e.screenX - down.sx) + Math.abs(e.screenY - down.sy) > 3) moved = true;
+    window.petAPI?.dragMove({ x: e.screenX - down.gx, y: e.screenY - down.gy });
+  });
+  function endDrag() {
+    if (!down) return;
+    window.petAPI?.dragEnd();          // → 메인: 잡기 해제하고 떨어뜨림(가까운 창에 착지)
+    pet.classList.remove('held');
+    if (!moved) {                       // 거의 안 움직였으면 '쓰다듬기' (말은 메인이 성격대로 보냄)
+      window.petAPI?.petted();
+      hop(); heart();
+    }
+    down = null;
+  }
+  pet.addEventListener('pointerup', endDrag);
+  pet.addEventListener('pointercancel', endDrag);
+  // 마우스를 올리면 펫이 멈춰서 클릭하기 쉽게
+  pet.addEventListener('pointerenter', () => window.petAPI?.hover(true));
+  pet.addEventListener('pointerleave', () => window.petAPI?.hover(false));
+
+  // 우클릭 메뉴
+  window.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    window.petAPI?.showContextMenu();
+  });
+
+  // 메인 프로세스가 보내는 상태 반영 (walk / idle / fall / held / climb / ceil)
+  window.petAPI?.onState(({ mode, dir, side }) => {
+    curMode = mode;
+    let t = 'scaleX(1)';
+    if (mode === 'climb') t = side === 'L' ? 'rotate(90deg)' : 'rotate(-90deg)';
+    else if (mode === 'ceil') t = 'scaleY(-1)';
+    else if (dir) t = dir < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+    flip.style.transform = t;
+    pet.classList.toggle('walking', mode === 'walk');
+    pet.classList.toggle('falling', mode === 'fall');
+  });
+
+  // 스킨 변경
+  window.petAPI?.onSetSkin?.((name) => render(name));
+
+  // 메인에서 보내는 메시지(날씨 등) 말풍선으로
+  window.petAPI?.onSay?.((text) => say(text, Math.min(5000, 2200 + text.length * 90)));
+
+  // 먹이/기쁨 반응 (폴짝 + 하트)
+  window.petAPI?.onCheer?.(() => { hop(); heart(); });
+
+  // 쉬는 동안 가끔 깡총/하트 (말풍선 텍스트는 메인이 성격대로 전송)
+  setInterval(() => {
+    if (curMode === 'idle' && Math.random() < 0.12) { hop(); if (Math.random() < 0.5) heart(); }
+  }, 5000);
+</script>
+</body>
+</html>
