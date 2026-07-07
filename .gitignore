@@ -11,3 +11,6 @@ data/
 # 로그
 electron.log
 *.log
+
+# 압축 산출물
+*.zip

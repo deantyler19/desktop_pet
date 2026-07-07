@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 18px 20px;
+    font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    background: #f7f4ef; color: #3a2a23;
+  }
+  h1 { font-size: 17px; margin: 0 0 4px; font-weight: 600; }
+  p.desc { font-size: 12px; color: #8a7a70; margin: 0 0 16px; }
+  .field { background: #fff; border: 1px solid #e5ddd2; border-radius: 12px; padding: 12px 14px; }
+  .field + .field { margin-top: 10px; }
+  label { display: block; font-size: 12px; color: #7a6a60; font-weight: 600; margin-bottom: 6px; }
+  input[type=text], input[type=date] {
+    width: 100%; padding: 8px 10px; font-size: 14px;
+    border: 1px solid #d8cfc4; border-radius: 8px; background: #fff; color: #3a2a23;
+  }
+  input:focus { outline: none; border-color: #bf5e3b; }
+  .hint { font-size: 11px; color: #a09080; margin-top: 6px; }
+  .row { display: flex; gap: 8px; margin-top: 16px; }
+  button { flex: 1; padding: 9px 0; font-size: 13px; font-weight: 600;
+    border: none; border-radius: 8px; cursor: pointer; }
+  .save { background: #bf5e3b; color: #fff; }
+  .save:hover { background: #a44d2f; }
+  .close { background: #ece5dc; color: #6a5a50; }
+  .close:hover { background: #e0d7cc; }
+</style>
+</head>
+<body>
+  <h1>설정</h1>
+  <p class="desc">애칭을 넣으면 펫이 가끔 이 이름으로 불러줘요.</p>
+
+  <div class="field">
+    <label for="name">애칭 (펫이 나를 부를 이름)</label>
+    <input type="text" id="name" maxlength="12" placeholder="예: 도트, 주인님, 지민" />
+    <div class="hint">최대 12자. 비워두면 부르지 않아요.</div>
+  </div>
+
+  <div class="field">
+    <label for="birthday">생일</label>
+    <input type="date" id="birthday" />
+    <div class="hint">생일 당일에 축하해 줘요 🎂</div>
+  </div>
+
+  <div class="row">
+    <button class="save" id="save">저장</button>
+    <button class="close" id="close">닫기</button>
+  </div>
+
+<script>
+  const $name = document.getElementById('name');
+  const $birthday = document.getElementById('birthday');
+
+  function save() {
+    window.petAPI?.setProfile?.({
+      name: $name.value.trim().slice(0, 12),
+      birthday: $birthday.value || '',
+    });
+  }
+  document.getElementById('save').addEventListener('click', () => { save(); window.petAPI?.closeSettings?.(); });
+  document.getElementById('close').addEventListener('click', () => window.petAPI?.closeSettings?.());
+  $name.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('save').click(); });
+
+  (async () => {
+    const p = await window.petAPI?.getProfile?.();
+    if (p) { $name.value = p.name || ''; $birthday.value = p.birthday || ''; }
+    $name.focus();
+  })();
+</script>
+</body>
+</html>
