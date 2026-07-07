@@ -67,27 +67,27 @@
     95%,97% { transform: scaleY(1); }
   }
 
-  /* 말풍선: 펫 머리 바로 위(살짝 우측)에 붙이고 꼬리로 연결 */
+  /* 말풍선: 펫 머리 위에 두고 꼬리로 연결 — 위치/폭은 JS가 창·화면 안으로 클램프 (짤림 방지) */
   #bubble {
     position: absolute; left: 44px; bottom: 56px;
-    transform: scale(0.6); transform-origin: bottom left;
+    transform: scale(.7) translateY(5px); transform-origin: 20px bottom;
     background: #fff; color: #3a2a23;
     padding: 6px 11px; border-radius: 13px;
     font-size: 13px; font-weight: 600;
-    max-width: 144px; white-space: normal; text-align: center; word-break: keep-all;
+    min-width: 36px; max-width: 144px;
+    white-space: normal; text-align: center; word-break: keep-all; overflow-wrap: anywhere;
     line-height: 1.38; text-wrap: balance;
     box-shadow: 0 3px 10px rgba(0,0,0,.2);
     opacity: 0; pointer-events: none;
-    transition: opacity .2s, transform .2s;
+    transition: opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
+    z-index: 10;
   }
-  #bubble.show { opacity: 1; transform: scale(1); }
-  #bubble::after {   /* 꼬리: 펫 머리를 향해 아래로 */
-    content: ""; position: absolute; bottom: -6px; left: 14px;
+  #bubble.show { opacity: 1; transform: scale(1) translateY(0); }
+  #bubble.long { font-size: 12px; line-height: 1.34; }   /* 긴 글은 살짝 작게 — 줄수/높이 초과 방지 */
+  #bubble::after {   /* 꼬리: 펫 머리를 향해 아래로 (위치는 JS가 지정) */
+    content: ""; position: absolute; bottom: -6px; left: var(--tail-left, 14px);
     border: 6px solid transparent; border-top-color: #fff; border-bottom: 0;
   }
-  /* 화면 오른쪽 끝에선 왼쪽으로 펼침 (잘림 방지) */
-  #bubble.left { left: auto; right: 116px; transform-origin: bottom right; }
-  #bubble.left::after { left: auto; right: 14px; }
 
   .heart {
     position: absolute; font-size: 14px; pointer-events: none;
@@ -183,8 +183,6 @@
   .prop { position: absolute; pointer-events: none; }
   .prop.umbrella { left: 50px; bottom: 80px; font-size: 22px; }
   .prop.snowman { left: 92px; bottom: 8px; font-size: 20px; }
-
-  #bubble { z-index: 10; }
 </style>
 </head>
 <body>
@@ -399,13 +397,30 @@
     const t = stripEmoji(text);
     if (!t) return;                 // 이모지만 있던 메시지는 건너뜀
     bubble.textContent = t;
-    // 창이 화면 오른쪽 끝이면 말풍선을 왼쪽으로 (안 잘리게)
-    const sw = (window.screen && window.screen.availWidth) || 1920;
-    bubble.classList.toggle('left', (window.screenX + (window.innerWidth || 190) + 10) > sw);
+    bubble.classList.toggle('long', t.length > 24);   // 긴 글은 살짝 작은 글씨
+
+    // 보이는 오른쪽 한계(px, 창 좌표): 창 폭과 '현재 모니터 오른쪽 끝' 중 좁은 쪽 (짤림 방지)
+    const scr = window.screen || {};
+    const screenRight = (scr.availLeft || 0) + (scr.availWidth || 1920);
+    const visR = Math.max(60, Math.min(window.innerWidth || 190, screenRight - window.screenX)) - 2;
+
+    const HEAD_X = 57;              // 펫 머리 중심 x
+    bubble.style.maxWidth = Math.min(150, visR - 4) + 'px';
+    const w = bubble.offsetWidth;   // 실제 렌더 폭 측정
+    let left = Math.round(HEAD_X - w * 0.3);            // 머리 위에서 살짝 오른쪽으로
+    left = Math.max(2, Math.min(left, visR - w));       // 창/화면 안으로 클램프
+    bubble.style.left = left + 'px';
+
+    let tail = HEAD_X - left - 6;                       // 꼬리는 항상 머리를 가리킴
+    tail = Math.max(9, Math.min(tail, w - 21));
+    bubble.style.setProperty('--tail-left', tail + 'px');
+    bubble.style.transformOrigin = (tail + 6) + 'px bottom';   // 꼬리에서 뿅 하고 피어남
+
     bubble.classList.add('show');
     clearTimeout(say._t);
     say._t = setTimeout(() => bubble.classList.remove('show'), ms);
   }
+  window._say = say;   // 테스트용 훅 (브라우저에서 말풍선 배치 검증)
   function hop() {
     pet.classList.remove('happy');
     void pet.offsetWidth;
