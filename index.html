@@ -11,10 +11,10 @@
     font-family: -apple-system, "Segoe UI", sans-serif;
     cursor: default;
   }
-  #pet { position: absolute; inset: 0; cursor: grab; }
-  #pet.held { cursor: grabbing; }
-  /* 펫 그림은 창 하단 120x100 영역에 고정 (위쪽은 말풍선 공간) */
-  #petbox { position: absolute; left: 0; bottom: 0; width: 120px; height: 100px; }
+  #pet { position: absolute; inset: 0; cursor: default; }
+  /* 펫 그림은 창 하단 120x100 영역에 고정 (위쪽은 말풍선 공간) — 커서도 펫 위에서만 grab */
+  #petbox { position: absolute; left: 0; bottom: 0; width: 120px; height: 100px; cursor: grab; }
+  #pet.held #petbox { cursor: grabbing; }
 
   /* 위아래 흔들림 / 걷기 (몸통) */
   #body-wrap {
@@ -439,9 +439,9 @@
   }
 
   // 드래그로 옮기기 — 포인터 캡처로 커서가 창 밖으로 나가도 끝까지 추적/종료
-  let down = null, moved = false;
+  let down = null, moved = false, overPet = false;
   pet.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || !overPet) return;
     try { pet.setPointerCapture(e.pointerId); } catch {}
     down = { id: e.pointerId, gx: e.clientX, gy: e.clientY, sx: e.screenX, sy: e.screenY };
     moved = false;
@@ -465,9 +465,27 @@
   }
   pet.addEventListener('pointerup', endDrag);
   pet.addEventListener('pointercancel', endDrag);
-  // 마우스를 올리면 펫이 멈춰서 클릭하기 쉽게
-  pet.addEventListener('pointerenter', () => window.petAPI?.hover(true));
-  pet.addEventListener('pointerleave', () => window.petAPI?.hover(false));
+  // ── 클릭 영역 최소화: 펫 스프라이트 위에서만 마우스를 받음 (말풍선/빈 영역은 아래 창으로 통과) ──
+  const HIT_PAD = 8;   // 잡기 쉽게 스프라이트 주변 여유
+  let hitR = null, hitRT = 0;
+  function overSprite(x, y) {
+    const now = Date.now();
+    if (!hitR || now - hitRT > 200) {   // 레이아웃 강제 계산은 200ms에 한 번만 (스킨 바꿔도 자동 갱신)
+      hitR = pixgroup.getBoundingClientRect();
+      hitRT = now;
+    }
+    return x >= hitR.left - HIT_PAD && x <= hitR.right + HIT_PAD &&
+           y >= hitR.top - HIT_PAD && y <= hitR.bottom + HIT_PAD;
+  }
+  function setOver(over) {
+    if (over === overPet) return;
+    overPet = over;
+    window.petAPI?.setMouseIgnore?.(!over);        // 펫 밖 = 클릭 통과
+    window.petAPI?.hover?.(over);                  // 펫 위 = 멈춰서 클릭 쉽게
+  }
+  window.addEventListener('mousemove', (e) => { if (!down) setOver(overSprite(e.clientX, e.clientY)); });
+  window.addEventListener('mouseout', (e) => { if (!e.relatedTarget && !down) setOver(false); });
+  window.petAPI?.setMouseIgnore?.(true);           // 시작은 통과 상태 (펫 위로 오면 자동 해제)
 
   // 우클릭 메뉴
   window.addEventListener('contextmenu', (e) => {

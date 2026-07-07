@@ -976,8 +976,8 @@ function openSettings() {
 }
 
 function tick() {
-  // 절전: 쉬는 중/얼음일 땐 느리게, 움직일 땐 부드럽게
-  const delay = alarming ? 33 : (paused ? 500 : (grounded && mode === 'idle' ? 160 : 33));
+  // 절전: 쉬는 중/얼음/잠금/낮잠일 땐 느리게, 움직일 땐 부드럽게
+  const delay = alarming ? 33 : ((paused || locked || away) ? 500 : (grounded && mode === 'idle' ? 160 : 33));
   tickTimer = setTimeout(tick, delay);
   if (!win || win.isDestroyed() || locked) return;
 
@@ -1094,6 +1094,10 @@ function tick() {
 }
 
 function scheduleRefresh() {
+  if (locked || paused || away) {   // 멈춰 있는 동안엔 창 스캔(Win32 열거) 생략 — 깨어나면 2초 안에 재개
+    setTimeout(scheduleRefresh, 2000);
+    return;
+  }
   refreshPlatforms();
   const d = (grounded && mode === 'idle' && !dragging) ? 2000 : 700;  // 절전
   setTimeout(scheduleRefresh, d);
@@ -1217,6 +1221,12 @@ ipcMain.on('profile-set', (_e, p) => {
 ipcMain.on('settings-close', () => { if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close(); });
 
 ipcMain.on('pet-hover', (_e, on) => { hovering = !!on; });
+// 클릭 영역 최소화: 펫 스프라이트 밖(말풍선/빈 영역)은 클릭이 아래 창으로 통과
+ipcMain.on('mouse-ignore', (_e, on) => {
+  if (!win || win.isDestroyed()) return;
+  if (process.platform === 'linux') return;   // linux는 forward 미지원 → 기존 동작 유지
+  try { win.setIgnoreMouseEvents(!!on, { forward: true }); } catch {}
+});
 ipcMain.on('pet-petted', () => {
   if (alarming) { stopAlarm(); return; }   // 알람 중엔 터치 = 알람 끄기
   wake();                                   // 자고 있었으면 깨우기

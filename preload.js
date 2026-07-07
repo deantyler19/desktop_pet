@@ -21,4 +21,5 @@ contextBridge.exposeInMainWorld('petAPI', {
   dragMove: (pos) => ipcRenderer.send('drag-move', pos),
   dragEnd: () => ipcRenderer.send('drag-end'),
   hover: (on) => ipcRenderer.send('pet-hover', !!on),
+  setMouseIgnore: (on) => ipcRenderer.send('mouse-ignore', !!on),
 });
