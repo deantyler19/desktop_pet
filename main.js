@@ -16,7 +16,7 @@ const IS_WIN = process.platform === 'win32';
 process.on('uncaughtException', (e) => { try { console.error('uncaught:', e && e.message); } catch {} });
 process.on('unhandledRejection', () => {});
 
-const WIN_W = 190;         // 창 폭(펫 120 + 오른쪽 말풍선 공간 70)
+const WIN_W = 300;         // 창 폭(펫 120 + 말풍선 공간 180) — 넓은 영역은 투명·클릭통과
 const WIN_H = 150;         // 펫은 아래 100px(좌측), 위쪽은 말풍선 공간
 const PET_W = 120;         // 펫 그림 실제 폭 (창 왼쪽에 그림)
 const FEET = 6;            // 창 바닥~발끝 보정

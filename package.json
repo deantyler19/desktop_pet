@@ -25,7 +25,11 @@
       "**/*",
       "!userdata${/*}",
       "!data${/*}",
-      "!electron.log"
+      "!electron.log",
+      "!*.zip",
+      "!05-qa${/*}",
+      "!brand${/*}",
+      "!.claude${/*}"
     ],
     "asarUnpack": [
       "**/node_modules/koffi/**"

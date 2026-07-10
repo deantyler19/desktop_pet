@@ -26,13 +26,13 @@
     0%,100% { transform: translateY(0) scale(1); }
     50% { transform: translateY(-2px) scale(1.01); }
   }
-  /* 걸을 때 뒤뚱뒤뚱 */
+  /* 걸을 때: 중립 뒤뚱임 + 통통 (방향은 얼굴/눈동자가 진행 쪽을 향하는 것으로만 전달) */
   #pet.walking #body-wrap { animation: walk .44s ease-in-out infinite; }
-  @keyframes walk {           /* 몸통: 발걸음에 맞춰 가볍게 통통 + 살짝 뒤뚱 */
+  @keyframes walk {
     0%,100% { transform: translateY(0) rotate(-2deg); }
     50%     { transform: translateY(-2px) rotate(2deg); }
   }
-  /* 다리 좌/우 교대 스텝 (걸어다니는 느낌) */
+  /* 다리 좌/우 교대 스텝 (위아래 마칭) */
   #pet.walking .leg-l { animation: stepL .44s ease-in-out infinite; }
   #pet.walking .leg-r { animation: stepR .44s ease-in-out infinite; }
   @keyframes stepL { 0%,100% { transform: translateY(-4px); } 50% { transform: translateY(0); } }
@@ -74,7 +74,7 @@
     background: #fff; color: #3a2a23;
     padding: 6px 11px; border-radius: 13px;
     font-size: 13px; font-weight: 600;
-    min-width: 36px; max-width: 144px;
+    min-width: 30px; max-width: 260px;
     white-space: normal; text-align: center; word-break: keep-all; overflow-wrap: anywhere;
     line-height: 1.38; text-wrap: balance;
     box-shadow: 0 3px 10px rgba(0,0,0,.2);
@@ -200,125 +200,340 @@
   // ── 스킨 정의 (픽셀 도트) ──────────────────────
   // 문자 → 팔레트 색. 'K'=눈(검정, 깜빡임 적용). '.'/' '=빈칸.
   const K = '#161616';
+  // ── 2등신 스킨 (s:4 고해상도, 큰 얼굴몸통 + 가는 다리) ──
+  // 공통 문자: O=외곽선, 1=몸 기본, H=하이라이트, D=그림자, W=눈 흰자/반짝, K=눈동자
+  // 눈동자를 오른쪽에 배치해 기본(오른쪽 이동) 방향을 바라봄 — 왼쪽 이동 시 flip으로 일치
   const SKINS = {
     claude: {
-      pal: { C: '#bf5e3b', K }, eyelid: '#bf5e3b',
+      s: 4,
+      pal: { O: '#7a3a20', 1: '#c05e3b', H: '#d5825c', D: '#a54c2d', W: '#ffffff', K }, eyelid: '#c05e3b',
       grid: [
-        "..CCCCCCCCCC..", ".CCCCCCCCCCCC.", ".CCKKCCCCKKCC.", ".CCKKCCCCKKCC.",
-        "CCCCCCCCCCCCCC", ".CCCCCCCCCCCC.", ".CCCCCCCCCCCC.", "...CC....CC...", "...CC....CC...",
+        ".....OOOOOOOOOOO.....",
+        "...OOHHHHHHHHHHHOO...",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..OH1111111111111HO..",
+        "..O11WWWW111WWWW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O111111111111111O..",
+        "OOO111D1111111D111OOO",
+        "11O1111DDDDDDD1111O11",
+        "OOO111111111111111OOO",
+        "..OD1111111111111DO..",
+        "..ODDDDDDDDDDDDDDDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        ".....OOOO...OOOO.....",
       ],
     },
     cat: {
-      pal: { 1: '#9b9ea3', 2: '#e88aa0', 3: '#cf6076', 4: '#7a7d82', K }, eyelid: '#9b9ea3',
+      s: 4,
+      pal: { O: '#5f6266', 1: '#9b9ea3', H: '#b4b7bb', D: '#7a7d82', 2: '#e88aa0', 3: '#cf6076', W: '#ffffff', K }, eyelid: '#9b9ea3',
       grid: [
-        "..1........1..", ".111......111.", ".121......121.", "..1111111111..",
-        ".111111111111.", "11111111111111", "411KK1111KK114", "41111331111114",
-        ".111111111111.", "...11....11...", "...11....11...",
+        "...OO...........OO...",
+        "..O12O.........O21O..",
+        "..OOOOOOOOOOOOOOOOO..",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..O11WWWW111WWWW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O111111131111111O..",
+        "OOO111D1111111D111OOO",
+        "11O1111DDDDDDD1111O11",
+        "OOO111111111111111OOO",
+        "..OD1111111111111DO..",
+        "..ODDDDDDDDDDDDDDDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        ".....OOOO...OOOO.....",
       ],
     },
     dog: {
-      pal: { 1: '#b5824f', 2: '#5a3d28', 3: '#2a1d14', 4: '#e0706a', K }, eyelid: '#b5824f',
+      s: 4,
+      pal: { O: '#4a3320', 1: '#b5824f', H: '#caa06a', D: '#96683c', E: '#5a3d28', 3: '#2a1d14', W: '#ffffff', K }, eyelid: '#b5824f',
       grid: [
-        "222........222", "22211111111222", "22211111111222", "22111111111122",
-        ".111111111111.", "111KK1111KK111", "11111111111111", "11111331111111",
-        "11111144111111", ".111111111111.", "...11....11...", "...11....11...",
-      ],
-    },
-    hamster: {
-      pal: { 1: '#d8a25e', 2: '#f3e2c4', 3: '#cf6076', K }, eyelid: '#d8a25e',
-      grid: [
-        "..11......11..", "..1111111111..", ".111111111111.", "11111111111111",
-        "111KK1111KK111", "11111331111111", "12222222222221", "12222222222221",
-        "12222222222221", ".112222222211.", "...11....11...", "...11....11...",
-      ],
-    },
-    penguin: {
-      // 1=검정 몸, 2=흰 배, 3=주황 부리/발, K=눈
-      pal: { 1: '#2e2e38', 2: '#f5f5f5', 3: '#f0a030', K }, eyelid: '#f5f5f5',
-      grid: [
-        "..1111111111..", ".111111111111.", "11111111111111",
-        "11222222222211", "112KK2222KK211", "11222233222211",
-        "11222222222211", "11222222222211", "11222222222211",
-        ".112222222211.", "...33....33...",
+        ".....OOOOOOOOOOO.....",
+        "...OOHHHHHHHHHHHOO...",
+        "EEOHHHHHHHHHHHHHHHOEE",
+        "EEOH1111111111111HOEE",
+        "EEO11WWWW111WWWW11OEE",
+        "EEO11WKKW111WKKW11OEE",
+        "EEO11WKKW111WKKW11OEE",
+        "OEO111111131111111OEO",
+        "OOO111D1111111D111OOO",
+        "11O1111DDDDDDD1111O11",
+        "OOO111111111111111OOO",
+        "..OD1111111111111DO..",
+        "..ODDDDDDDDDDDDDDDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        ".....OOOO...OOOO.....",
       ],
     },
     rabbit: {
-      // 1=흰 몸, 3=분홍 귀안/코, K=눈
-      pal: { 1: '#f3f3f3', 3: '#f2a0b0', K }, eyelid: '#f3f3f3',
+      s: 4,
+      pal: { O: '#9a9aa4', 1: '#f3f3f3', H: '#ffffff', D: '#dcdce2', 2: '#f2a0b0', 3: '#e0879a', W: '#ffffff', K }, eyelid: '#f3f3f3',
       grid: [
-        "....11..11....", "....33..33....", "....11..11....",
-        "..1111111111..", ".111111111111.", "11111111111111",
-        "111KK1111KK111", "111KK1111KK111", "11111133111111",
-        ".111111111111.", "...11....11...", "...11....11...",
+        ".....O1O.....O1O.....",
+        ".....O2O.....O2O.....",
+        ".....O2O.....O2O.....",
+        ".....O2O.....O2O.....",
+        "..OOOOOOOOOOOOOOOOO..",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..O111KK11111KK111O..",
+        "..O111WK11111KW111O..",
+        "..O111KK11111KK111O..",
+        "..O111111131111111O..",
+        "OOO111D1111111D111OOO",
+        "11O1111DDDDDDD1111O11",
+        "OOO111111111111111OOO",
+        "..OD1111111111111DO..",
+        "..ODDDDDDDDDDDDDDDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        ".....OOOO...OOOO.....",
+      ],
+    },
+    hamster: {
+      s: 4,
+      pal: { O: '#9c6f33', 1: '#d8a25e', H: '#e8bc7e', D: '#c08a48', 2: '#f3e2c4', 3: '#cf6076', W: '#ffffff', K }, eyelid: '#d8a25e',
+      grid: [
+        "...OO...........OO...",
+        "..O11O.........O11O..",
+        "..OOOOOOOOOOOOOOOOO..",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..O11WWWW111WWWW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O111111131111111O..",
+        "OOO222D1111111D222OOO",
+        "11O2222DDDDDDD2222O11",
+        "OOO222111111111222OOO",
+        "..OD1111111111111DO..",
+        "..ODDDDDDDDDDDDDDDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        ".....OOOO...OOOO.....",
+      ],
+    },
+    penguin: {
+      s: 4,
+      pal: { O: '#17171f', 1: '#2e2e38', H: '#484855', D: '#1e1e26', 2: '#f5f5f5', 3: '#f0a030', W: '#ffffff', K }, eyelid: '#f5f5f5',
+      grid: [
+        ".....OOOOOOOOOOO.....",
+        "...OOHHHHHHHHHHHOO...",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..O122222222222221O..",
+        "..O122KK22222KK221O..",
+        "..O122KK22222KK221O..",
+        "..O122222222222221O..",
+        "..O122222333222221O..",
+        "OOO112222222222211OOO",
+        "11O112222222222211O11",
+        "OOO112222222222211OOO",
+        "..OD1122222222211DO..",
+        "..ODD11222222211DDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O3O...O3O......",
+        "......O3O...O3O......",
+        "......O3O...O3O......",
+        ".....O33O...O33O.....",
       ],
     },
     panda: {
-      // 1=흰 몸, 2=검정 귀/눈가/팔, W=눈 하이라이트
-      pal: { 1: '#f3f3f3', 2: '#2e2e38', W: '#ffffff' }, eyelid: '#f3f3f3',
+      s: 4,
+      pal: { O: '#4a4a55', 1: '#f3f3f3', H: '#ffffff', D: '#dcdce2', 2: '#2e2e38', W: '#ffffff', K }, eyelid: '#2e2e38',
       grid: [
-        ".22........22.", "..1111111111..", ".111111111111.",
-        "11111111111111", "112W211112W211", "112W211112W211",
-        "11111122111111", "11111111111111", "22111111111122",
-        "22111111111122", "...22....22...", "...22....22...",
-      ],
-    },
-
-    chick: {
-      pal: { 1: '#ffd83d', 2: '#f5c518', 3: '#f08a30', K }, eyelid: '#ffd83d',
-      grid: [
-        ".....1.1.1....", "..1111111111..", ".111111111111.", "11111111111111",
-        "111KK1111KK111", "11111331111111", "21111111111112", "21111111111112",
-        ".111111111111.", "...33....33...",
+        "...22...........22...",
+        "..2222.........2222..",
+        "..OOOOOOOOOOOOOOOOO..",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..O112221111122211O..",
+        "..O112W2111112W211O..",
+        "..O112221111122211O..",
+        "..O111111121111111O..",
+        "OOO222111111111222OOO",
+        "11O222111111111222O11",
+        "OOO222111111111222OOO",
+        "..OD1111111111111DO..",
+        "..ODDDDDDDDDDDDDDDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O2O...O2O......",
+        "......O2O...O2O......",
+        "......O2O...O2O......",
+        ".....OOOO...OOOO.....",
       ],
     },
     bear: {
-      pal: { 1: '#9c6b43', 2: '#c89a6f', 3: '#3a241c', K }, eyelid: '#9c6b43',
+      s: 4,
+      pal: { O: '#5f3f26', 1: '#9c6b43', H: '#b28457', D: '#835838', 2: '#c89a6f', 3: '#3a241c', W: '#ffffff', K }, eyelid: '#9c6b43',
       grid: [
-        ".222......222.", ".222......222.", "..1111111111..", ".111111111111.",
-        "11111111111111", "111KK1111KK111", "11111111111111", "11112222221111",
-        "11112233221111", ".111111111111.", "...11....11...", "...11....11...",
+        "...OO...........OO...",
+        "..O12O.........O21O..",
+        "..OOOOOOOOOOOOOOOOO..",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..O11WWWW111WWWW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O112222333222211O..",
+        "OOO111D2222222D111OOO",
+        "11O1112DDDDDDD2111O11",
+        "OOO111111111111111OOO",
+        "..OD1111111111111DO..",
+        "..ODDDDDDDDDDDDDDDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        ".....OOOO...OOOO.....",
       ],
     },
     fox: {
-      pal: { 1: '#df6234', 2: '#f5f0e8', 3: '#3a241c', K }, eyelid: '#df6234',
+      s: 4,
+      pal: { O: '#8a3a1c', 1: '#df6234', H: '#ef7d4e', D: '#c04f28', 2: '#f5f0e8', 3: '#3a241c', W: '#ffffff', K }, eyelid: '#df6234',
       grid: [
-        "..3........3..", ".333......333.", ".313......313.", "..1111111111..",
-        ".111111111111.", "11111111111111", "111KK1111KK111", "11222222222211",
-        "11222233222211", ".112222222211.", "...11....11...", "...11....11...",
+        "...OO...........OO...",
+        "..O13O.........O31O..",
+        "..OOOOOOOOOOOOOOOOO..",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..O11WWWW111WWWW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O112222333222211O..",
+        "OOO111D2222222D111OOO",
+        "11O1112DDDDDDD2111O11",
+        "OOO111111111111111OOO",
+        "..OD1111111111111DO..",
+        "..ODDDDDDDDDDDDDDDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        ".....OOOO...OOOO.....",
+      ],
+    },
+    chick: {
+      s: 4,
+      pal: { O: '#c9940a', 1: '#ffd83d', H: '#ffe873', D: '#f5c518', 3: '#f08a30', W: '#ffffff', K }, eyelid: '#ffd83d',
+      grid: [
+        ".........O1O.........",
+        ".....OOOOOOOOOOO.....",
+        "...OOHHHHHHHHHHHOO...",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..O11WWWW111WWWW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O111111333111111O..",
+        "OOO111111111111111OOO",
+        "11O111111111111111O11",
+        "OOO111111111111111OOO",
+        "..OD1111111111111DO..",
+        "..ODDDDDDDDDDDDDDDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O3O...O3O......",
+        "......O3O...O3O......",
+        "......O3O...O3O......",
+        ".....O33O...O33O.....",
       ],
     },
     capybara: {
-      // 1=갈색 몸, 2=밝은 주둥이, 3=어두운 코, K=눈
-      pal: { 1: '#a87a4e', 2: '#caa478', 3: '#5a4632', K }, eyelid: '#a87a4e',
+      s: 4,
+      pal: { O: '#6b4a2a', 1: '#a87a4e', H: '#bd9264', D: '#8f6540', 2: '#caa478', 3: '#5a4632', K }, eyelid: '#a87a4e',
       grid: [
-        "11........11", "111......111", ".1111111111.", "111111111111",
-        "11KK1111KK11", "111111111111", "112222222211", "112233332211",
-        "112222222211", ".1111111111.", "..11....11..", "..11....11..",
+        "....OO.........OO....",
+        "..OOOOOOOOOOOOOOOOO..",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..OH1111111111111HO..",
+        "..O111KK11111KK111O..",
+        "..O111KK11111KK111O..",
+        "..O111111111111111O..",
+        "..O111222222222111O..",
+        "OOO111222333222111OOO",
+        "11O111222222222111O11",
+        "OOO111222222222111OOO",
+        "..OD1112222222111DO..",
+        "..ODDDDDDDDDDDDDDDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        ".....OOOO...OOOO.....",
       ],
     },
     duck: {
-      // 1=노란 몸, 2=주황 부리/발, K=눈
-      pal: { 1: '#ffd23d', 2: '#f5a623', K }, eyelid: '#ffd23d',
+      s: 4,
+      pal: { O: '#c99a0a', 1: '#ffd23d', H: '#ffe36e', D: '#f0b823', 3: '#f5a623', W: '#ffffff', K }, eyelid: '#ffd23d',
       grid: [
-        "..1111111111..", ".111111111111.", "11111111111111", "111KK1111KK111",
-        "11111111111111", "11222222222211", "11222222222211", "11111111111111",
-        ".111111111111.", "...22....22...",
+        ".....OOOOOOOOOOO.....",
+        "...OOHHHHHHHHHHHOO...",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..OH1111111111111HO..",
+        "..O11WWWW111WWWW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O11WKKW111WKKW11O..",
+        "..O111113333311111O..",
+        "OOO111133333331111OOO",
+        "11O111111111111111O11",
+        "OOO111111111111111OOO",
+        "..OD1111111111111DO..",
+        "..ODDDDDDDDDDDDDDDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O3O...O3O......",
+        "......O3O...O3O......",
+        "......O3O...O3O......",
+        ".....O33O...O33O.....",
       ],
     },
     frog: {
-      pal: { 1: '#6abf4b', 2: '#eaf3d8', 3: '#3f8a2e', K }, eyelid: '#6abf4b',
+      s: 4,
+      pal: { O: '#3d7a2c', 1: '#6abf4b', H: '#85d466', D: '#54a03a', 2: '#eaf3d8', 3: '#3f8a2e', W: '#ffffff', K }, eyelid: '#6abf4b',
       grid: [
-        "..11....11....", "..KK....KK....", "..1111111111..", ".111111111111.",
-        "11111111111111", "11333333333311", "11222222222211", ".112222222211.",
-        "...11....11...", "...11....11...",
+        "...OOOO.......OOOO...",
+        "...OKKO.......OKKO...",
+        "..OOOOOOOOOOOOOOOOO..",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..O111311111113111O..",
+        "..O1DDDDDDDDDDDDD1O..",
+        "OOO122222222222221OOO",
+        "11O122222222222221O11",
+        "OOO122222222222221OOO",
+        "..OD1222222222221DO..",
+        "..ODD12222222221DDO..",
+        "...OOOOOOOOOOOOOOO...",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        "......O1O...O1O......",
+        ".....OOOO...OOOO.....",
       ],
     },
     ghost: {
-      pal: { 1: '#eef0f5', K }, eyelid: '#eef0f5',
+      s: 4,
+      pal: { O: '#b9bdc9', 1: '#eef0f5', H: '#ffffff', D: '#d5d9e2', M: '#3a3a44', W: '#ffffff', K }, eyelid: '#eef0f5',
       grid: [
-        "..1111111111..", ".111111111111.", "11111111111111", "111KK1111KK111",
-        "111KK1111KK111", "11111111111111", "11111111111111", ".111111111111.",
-        "11.11.11.11.11",
+        ".....OOOOOOOOOOO.....",
+        "...OOHHHHHHHHHHHOO...",
+        "..OHHHHHHHHHHHHHHHO..",
+        "..OH1111111111111HO..",
+        "..O111KK11111KK111O..",
+        "..O111WK11111KW111O..",
+        "..O111KK11111KK111O..",
+        "..O111111111111111O..",
+        "..O111111MMM111111O..",
+        "..O111111MMM111111O..",
+        "..OD1111111111111DO..",
+        "..ODDDDDDDDDDDDDDDO..",
+        "..O1O1O1O1O1O1O1O1O..",
+        "..O.O.O.O.O.O.O.O.O..",
       ],
     },
   };
@@ -352,8 +567,9 @@
     const sk = SKINS[name] || SKINS.claude;
     curSkin = SKINS[name] ? name : 'claude';
     const grid = sk.grid, rows = grid.length, cols = grid[0].length;
-    const OX = 60 - cols * S / 2;     // 가로 가운데
-    const OY = 94 - rows * S;         // 발끝을 항상 같은 바닥(y≈94)에 맞춤
+    const CS = sk.s || S;             // 셀 크기 (고해상도 스킨은 4, 기본 6)
+    const OX = 60 - cols * CS / 2;    // 가로 가운데
+    const OY = 94 - rows * CS;        // 발끝을 항상 같은 바닥(y≈94)에 맞춤
     while (pixgroup.firstChild) pixgroup.removeChild(pixgroup.firstChild);
 
     // 다리 행 판별: 맨 아래 3행 중 '다리 덩어리가 2개 이상'인 행 = 걸을 때 움직일 부분
@@ -363,7 +579,7 @@
     }
 
     const shadowG = mkG();
-    rectInto(shadowG, OX + cols * S * 0.18, 96, cols * S * 0.64, 5, 'rgba(0,0,0,.12)');
+    rectInto(shadowG, OX + cols * CS * 0.18, 96, cols * CS * 0.64, 5, 'rgba(0,0,0,.12)');
     const legLG = mkG('leg-l'), legRG = mkG('leg-r'), bodyG = mkG();   // 왼다리/오른다리/몸통
 
     const eyes = [];
@@ -372,12 +588,12 @@
         const ch = grid[r][c];
         if (ch === '.' || ch === ' ') continue;
         const g = legRow[r] ? (c < cols / 2 ? legLG : legRG) : bodyG;
-        rectInto(g, OX + c * S, OY + r * S, S + 0.6, S + 0.6, sk.pal[ch] || '#000');
-        if (ch === 'K') eyes.push([c, r]);
+        rectInto(g, OX + c * CS, OY + r * CS, CS + 0.6, CS + 0.6, sk.pal[ch] || '#000');
+        if (ch === 'K' || ch === 'W') eyes.push([c, r]);   // W=눈 반사광도 깜빡임에 포함
       }
     }
     for (const [c, r] of eyes)   // 깜빡임 덮개
-      rectInto(bodyG, OX + c * S, OY + r * S, S + 0.6, S + 0.6, sk.eyelid, 'eye-lid');
+      rectInto(bodyG, OX + c * CS, OY + r * CS, CS + 0.6, CS + 0.6, sk.eyelid, 'eye-lid');
   }
   render('claude');
 
@@ -397,22 +613,39 @@
     const t = stripEmoji(text);
     if (!t) return;                 // 이모지만 있던 메시지는 건너뜀
     bubble.textContent = t;
-    bubble.classList.toggle('long', t.length > 24);   // 긴 글은 살짝 작은 글씨
+    bubble.classList.toggle('long', t.length > 28);    // 아주 긴 글만 살짝 작은 글씨
 
-    // 보이는 오른쪽 한계(px, 창 좌표): 창 폭과 '현재 모니터 오른쪽 끝' 중 좁은 쪽 (짤림 방지)
+    // 화면에 실제로 보이는 창-로컬 x 범위 [visL, visR] (모니터 밖으로 안 나가게)
     const scr = window.screen || {};
-    const screenRight = (scr.availLeft || 0) + (scr.availWidth || 1920);
-    const visR = Math.max(60, Math.min(window.innerWidth || 190, screenRight - window.screenX)) - 2;
-
+    const sL = scr.availLeft || 0, sR = sL + (scr.availWidth || 1920);
+    const winW = window.innerWidth || 300;
+    const visL = Math.max(2, (sL - window.screenX) + 2);
+    const visR = Math.min(winW - 2, (sR - window.screenX) - 2);
     const HEAD_X = 57;              // 펫 머리 중심 x
-    bubble.style.maxWidth = Math.min(150, visR - 4) + 'px';
-    const w = bubble.offsetWidth;   // 실제 렌더 폭 측정
-    let left = Math.round(HEAD_X - w * 0.3);            // 머리 위에서 살짝 오른쪽으로
-    left = Math.max(2, Math.min(left, visR - w));       // 창/화면 안으로 클램프
+
+    // 폭: 상한(260)·보이는 폭 안에서, '줄 수가 늘지 않는 최소 폭'을 이진탐색해 텍스트에 딱 맞춤 (흰 여백 제거)
+    // offsetHeight는 CSS 변형(scale)과 무관한 레이아웃 값이라 측정이 정확함
+    const maxW = Math.max(60, Math.min(260, visR - visL));
+    bubble.style.maxWidth = maxW + 'px';
+    bubble.style.width = maxW + 'px';
+    const fullH = bubble.offsetHeight;                  // 최대 폭에서의 높이(= 최소 줄 수)
+    let lo = 30, hi = maxW, best = maxW;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      bubble.style.width = mid + 'px';
+      // 줄 수 그대로 + 가로 넘침 없으면 더 줄여봄
+      if (bubble.offsetHeight <= fullH && bubble.scrollWidth <= bubble.offsetWidth + 1) { best = mid; hi = mid - 1; }
+      else lo = mid + 1;                                                 // 줄이 늘거나 넘치면 넓혀야 함
+    }
+    const w = best;
+    bubble.style.width = w + 'px';
+    let left = Math.round(HEAD_X - w / 2);              // 머리 위 가운데 정렬
+    left = Math.max(visL, Math.min(left, visR - w));    // 보이는 화면 안으로 클램프
+    if (visR - visL < w) left = visL;                   // 공간이 폭보다 좁으면 왼쪽에 붙임
     bubble.style.left = left + 'px';
 
     let tail = HEAD_X - left - 6;                       // 꼬리는 항상 머리를 가리킴
-    tail = Math.max(9, Math.min(tail, w - 21));
+    tail = Math.max(8, Math.min(tail, w - 20));
     bubble.style.setProperty('--tail-left', tail + 'px');
     bubble.style.transformOrigin = (tail + 6) + 'px bottom';   // 꼬리에서 뿅 하고 피어남
 
@@ -513,7 +746,7 @@
     curMode = mode;
     let t = 'scaleX(1)';
     if (mode === 'climb') t = side === 'L' ? 'rotate(90deg)' : 'rotate(-90deg)';
-    else if (mode === 'ceil') t = 'scaleY(-1)';
+    else if (mode === 'ceil') t = 'scaleY(-1)' + (dir < 0 ? ' scaleX(-1)' : '');   // 천장에서도 이동 방향 바라보기
     else if (dir) t = dir < 0 ? 'scaleX(-1)' : 'scaleX(1)';
     flip.style.transform = t;
     pet.classList.toggle('walking', mode === 'walk');
