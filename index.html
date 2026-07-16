@@ -100,6 +100,11 @@
 
   /* 순간이동 '뿅' — 펫이 뿅 하고 나타나는 스케일 팝 */
   #petbox { transform-origin: 50% 92%; }
+  /* ── 환경 반응 몸동작 (poof/roll보다 먼저 선언 → 그 둘이 있을 땐 그쪽이 이김) ── */
+  #pet.env-cold #petbox { animation: shiver .11s steps(2) infinite; }   /* 추위: 덜덜 */
+  @keyframes shiver { 0% { transform: translateX(-0.7px); } 100% { transform: translateX(0.7px); } }
+  #pet.env-wind #petbox { animation: sway 1.8s ease-in-out infinite; }  /* 바람: 휘청 */
+  @keyframes sway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
   #pet.pop #petbox { animation: poof .42s cubic-bezier(.2,1.7,.4,1); }
   @keyframes poof {
     0%   { transform: scale(.15); }
@@ -115,6 +120,125 @@
     0%   { opacity: 1; transform: translate(0,0) scale(.4); }
     100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.1); }
   }
+
+  /* ── 졸림(밤·자리비움): 눈꺼풀 반쯤 내려옴 + 가끔 하품 ── */
+  #pet.drowsy .eye-lid { animation: none; transform-origin: top; transform: scaleY(.5); }
+  #pet.yawn .eye-lid { animation: none; transform-origin: top; transform: scaleY(1); }  /* 하품 순간 눈 감김 */
+  #pet.yawn #body-wrap { animation: yawnA .9s ease; }
+  @keyframes yawnA {
+    0%,100% { transform: translateY(0) scaleY(1); }
+    45% { transform: translateY(-3px) scaleY(1.12) scaleX(.97); }
+  }
+
+  /* ── 환경 파티클 (더위 땀 / 추위 입김 / 바람 낙엽) ── */
+  .sweat {
+    position: absolute; width: 5px; height: 7px; pointer-events: none;
+    background: #7ec8f0; border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+    animation: sweatfall 1.1s ease-in forwards;
+  }
+  @keyframes sweatfall {
+    0% { transform: translateY(0) scale(.6); opacity: 0; }
+    25% { opacity: .9; }
+    100% { transform: translateY(26px) scale(1); opacity: 0; }
+  }
+  .breath {
+    position: absolute; width: 10px; height: 10px; border-radius: 50%; pointer-events: none;
+    background: rgba(255,255,255,.72);
+    animation: breathout 1.6s ease-out forwards;
+  }
+  @keyframes breathout {
+    0% { transform: translate(0,0) scale(.3); opacity: 0; }
+    30% { opacity: .8; }
+    100% { transform: translate(18px,-10px) scale(1.35); opacity: 0; }
+  }
+  .leaf {
+    position: absolute; font-size: 12px; pointer-events: none;
+    animation: leaffly 2.6s linear forwards;
+  }
+  @keyframes leaffly {
+    0% { transform: translate(0,0) rotate(0); opacity: 0; }
+    15% { opacity: 1; }
+    100% { transform: translate(150px,-8px) rotate(220deg); opacity: 0; }
+  }
+
+  /* ── 놀람(집어들 때): 움찔 + "!" ── */
+  #pet.surprised #body-wrap { animation: startle .5s ease; }
+  @keyframes startle {
+    0%,100% { transform: translateY(0) scale(1); }
+    22% { transform: translateY(-9px) scaleY(1.12) scaleX(.92); }
+    55% { transform: translateY(0) scaleY(.95) scaleX(1.05); }
+  }
+  .excl {
+    position: absolute; left: 66px; bottom: 66px; font-size: 17px; font-weight: 900;
+    color: #ffcf3a; -webkit-text-stroke: 1.2px #b9820e; pointer-events: none;
+    animation: exclpop .65s ease forwards;
+  }
+  @keyframes exclpop {
+    0% { opacity: 0; transform: translateY(6px) scale(.4); }
+    30% { opacity: 1; transform: translateY(-3px) scale(1.15); }
+    100% { opacity: 0; transform: translateY(-12px) scale(1); }
+  }
+
+  /* ── 앉아 쉬기 → 눕기 (오래 가만히 있을 때) ── */
+  #pet.resting #body-wrap { animation: none; transform-origin: 50% 100%;
+    transform: translateY(6px) scaleY(.86) scaleX(1.06); transition: transform .45s ease; }
+  #pet.resting .leg-l, #pet.resting .leg-r { animation: none; transform: translateY(7px); transition: transform .45s ease; }
+  #pet.lying #petbox { transform-origin: 50% 100%; transform: translateY(9px) rotate(-11deg); transition: transform .6s ease; }
+
+  /* ── 맑은 날 콧노래 ♪ / 밤 별 ✨ ── */
+  .note { position: absolute; font-size: 13px; pointer-events: none; color: #f0a030;
+    animation: notefloat 1.9s ease-out forwards; }
+  @keyframes notefloat {
+    0% { opacity: 0; transform: translate(0,0) rotate(-8deg); }
+    25% { opacity: 1; }
+    100% { opacity: 0; transform: translate(16px,-28px) rotate(16deg); }
+  }
+  .star { position: absolute; font-size: 12px; pointer-events: none;
+    animation: startw 2s ease-in-out forwards; }
+  @keyframes startw {
+    0% { opacity: 0; transform: scale(.4); }
+    40% { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 0; transform: scale(.6); }
+  }
+
+  /* ── 3차 배치 ── */
+  /* 하트 눈 (SVG <text>에 적용) */
+  .hearteye { transform-box: fill-box; transform-origin: center; animation: hbeat .6s ease-in-out infinite; }
+  @keyframes hbeat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+  /* 춤추기 */
+  #pet.dance #body-wrap { animation: dance .5s ease-in-out infinite; }
+  @keyframes dance { 0%,100% { transform: rotate(-8deg) translateY(0); } 50% { transform: rotate(8deg) translateY(-3px); } }
+  /* 딸꾹질/재채기 */
+  #pet.hiccup #petbox { animation: hic .34s ease; }
+  @keyframes hic { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-6px) scaleY(1.08); } }
+  /* 삐짐(부루퉁) */
+  #pet.sulk #body-wrap { animation: none; transform: rotate(7deg) translateY(-1px); }
+  /* 커서 알아챔(쫑긋) */
+  #pet.notice #body-wrap { animation: perk .45s ease; }
+  @keyframes perk { 0%,100% { transform: translateY(0); } 45% { transform: translateY(-5px); } }
+  /* 간식 냠냠 */
+  #pet.snacking #body-wrap { animation: nibble .3s ease-in-out infinite; }
+  @keyframes nibble { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.6px) scaleY(.97); } }
+  .cookie { position: absolute; font-size: 15px; pointer-events: none; animation: cookiein .3s ease; }
+  @keyframes cookiein { 0% { transform: scale(.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  /* 머리 위 마크 (?, 💢, ! 등) */
+  .mark { position: absolute; left: 64px; bottom: 66px; font-size: 15px; font-weight: 800; pointer-events: none;
+    animation: exclpop .8s ease forwards; }
+  /* 벽에 기대기 (좌/우) */
+  #pet.lean-l #petbox { transform-origin: 0% 100%; transform: rotate(10deg) translateY(4px); transition: transform .5s ease; }
+  #pet.lean-r #petbox { transform-origin: 100% 100%; transform: rotate(-10deg) translateY(4px); transition: transform .5s ease; }
+  /* 봄 꽃잎 / (가을은 leaf 재사용) */
+  .petal { position: absolute; top: -12px; font-size: 11px; pointer-events: none; animation: petalfall linear forwards; }
+  @keyframes petalfall {
+    0% { transform: translateY(-12px) translateX(0) rotate(0); opacity: 0; }
+    12% { opacity: 1; }
+    100% { transform: translateY(150px) translateX(18px) rotate(200deg); opacity: 0; }
+  }
+  /* 저녁 노을 (펫 뒤 은은한 빛) */
+  #glow { position: absolute; left: 8px; bottom: 4px; width: 104px; height: 92px; border-radius: 50%; z-index: 0;
+    background: radial-gradient(circle, rgba(255,168,88,.42), rgba(255,168,88,0) 70%);
+    opacity: 0; transition: opacity 1.2s ease; pointer-events: none; }
+  #pet.glow #glow { opacity: 1; }
 
   /* ── 자리비움(낮잠) ── */
   #zzz { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
@@ -189,6 +313,7 @@
   <div id="pet">
     <div id="bubble"></div>
     <div id="face-hit"></div>
+    <div id="glow"></div>
     <div id="petbox"><div id="body-wrap"><div id="flip">
       <svg id="art" viewBox="0 0 120 100"></svg>
     </div></div></div>
@@ -595,7 +720,26 @@
     }
     for (const [c, r] of eyes)   // 깜빡임 덮개
       rectInto(bodyG, OX + c * CS, OY + r * CS, CS + 0.6, CS + 0.6, sk.eyelid, 'eye-lid');
+
+    // 볼(홍조) 위치 계산: 좌/우 눈 아래-바깥쪽. 기분(love) 연출에 사용
+    curOX = OX; curOY = OY; curCS = CS;
+    const lefts = eyes.filter(([c]) => c < cols / 2), rights = eyes.filter(([c]) => c >= cols / 2);
+    const cheek = (cells, side) => {
+      if (!cells.length) return null;
+      let mn = 99, mx = -1, mr = -1;
+      for (const [c, r] of cells) { mn = Math.min(mn, c); mx = Math.max(mx, c); mr = Math.max(mr, r); }
+      return [side === 'L' ? mn : mx - 1, mr + 1];
+    };
+    curCheeks = [cheek(lefts, 'L'), cheek(rights, 'R')].filter(Boolean);
+    const eyeCenter = (cells) => {
+      if (!cells.length) return null;
+      let sc = 0, sr = 0; for (const [c, r] of cells) { sc += c; sr += r; }
+      return [OX + (sc / cells.length + 0.5) * CS, OY + (sr / cells.length + 0.5) * CS];
+    };
+    curEyeC = [eyeCenter(lefts), eyeCenter(rights)].filter(Boolean);
+    moodG = mkG('mood');   // blush·하트눈 등 기분 오버레이 (맨 위)
   }
+  let curOX = 0, curOY = 0, curCS = 4, curCheeks = [], curEyeC = [], moodG = null;
   render('claude');
 
   // ── 행동 ───────────────────────────────────────
@@ -699,7 +843,10 @@
   });
   pet.addEventListener('pointermove', (e) => {
     if (!down) return;
-    if (Math.abs(e.screenX - down.sx) + Math.abs(e.screenY - down.sy) > 3) moved = true;
+    if (Math.abs(e.screenX - down.sx) + Math.abs(e.screenY - down.sy) > 3) {
+      if (!moved) surprise();   // 집어드는 순간 한 번 움찔
+      moved = true;
+    }
     window.petAPI?.dragMove({ x: e.screenX - down.gx, y: e.screenY - down.gy });
   });
   function endDrag() {
@@ -708,7 +855,7 @@
     pet.classList.remove('held');
     if (!moved) {                       // 거의 안 움직였으면 '쓰다듬기' (말은 메인이 성격대로 보냄)
       window.petAPI?.petted();
-      hop(); heart();
+      hop(); heart(); petLove();
     }
     down = null;
   }
@@ -726,14 +873,35 @@
     return x >= hitR.left - HIT_PAD && x <= hitR.right + HIT_PAD &&
            y >= hitR.top - HIT_PAD && y <= hitR.bottom + HIT_PAD;
   }
+  let hoverLoveT = null, lastNotice = 0;
   function setOver(over) {
     if (over === overPet) return;
     overPet = over;
     window.petAPI?.setMouseIgnore?.(!over);        // 펫 밖 = 클릭 통과
     window.petAPI?.hover?.(over);                  // 펫 위 = 멈춰서 클릭 쉽게
+    if (hoverLoveT) { clearTimeout(hoverLoveT); hoverLoveT = null; }
+    if (over) hoverLoveT = setTimeout(() => {       // 오래 봐주면(머무르면) 좋아함
+      setLove(true); heart(); mark('♥');
+      setTimeout(() => setLove(false), 2000);
+    }, 2800);
   }
-  window.addEventListener('mousemove', (e) => { if (!down) setOver(overSprite(e.clientX, e.clientY)); });
+  window.addEventListener('mousemove', (e) => {
+    if (down) return;
+    const over = overSprite(e.clientX, e.clientY);
+    setOver(over);
+    if (!over && hitR && curMode !== 'fall') {      // 커서가 근처로 오면 쫑긋 알아챔
+      const near = e.clientX > hitR.left - 42 && e.clientX < hitR.right + 42 &&
+                   e.clientY > hitR.top - 34 && e.clientY < hitR.bottom + 22;
+      if (near && Date.now() - lastNotice > 4500) {
+        lastNotice = Date.now();
+        pet.classList.add('notice'); mark('?');
+        setTimeout(() => pet.classList.remove('notice'), 460);
+      }
+    }
+  });
   window.addEventListener('mouseout', (e) => { if (!e.relatedTarget && !down) setOver(false); });
+  // 더블클릭 재롱 (구르기 + 하트)
+  pet.addEventListener('dblclick', () => { if (overPet) { playTrick('roll'); hop(); heart(); } });
   window.petAPI?.setMouseIgnore?.(true);           // 시작은 통과 상태 (펫 위로 오면 자동 해제)
 
   // 우클릭 메뉴
@@ -750,8 +918,10 @@
     else if (mode === 'ceil') t = 'scaleY(-1)' + (dir < 0 ? ' scaleX(-1)' : '');   // 천장에서도 이동 방향 바라보기
     else if (dir) t = dir < 0 ? 'scaleX(-1)' : 'scaleX(1)';
     flip.style.transform = t;
+    const wasFall = pet.classList.contains('falling');
     pet.classList.toggle('walking', mode === 'walk');
     pet.classList.toggle('falling', mode === 'fall');
+    if (mode === 'fall' && !wasFall) spawnEnv('sweat');   // 떨어질 때 당황(땀)
   });
 
   // 스킨 변경
@@ -760,8 +930,8 @@
   // 메인에서 보내는 메시지(날씨 등) 말풍선으로
   window.petAPI?.onSay?.((text) => say(text, Math.min(5000, 2200 + text.length * 90)));
 
-  // 먹이/기쁨 반응 (폴짝 + 하트)
-  window.petAPI?.onCheer?.(() => { hop(); heart(); });
+  // 먹이/기쁨 반응 (폴짝 + 하트 + 반짝이)
+  window.petAPI?.onCheer?.(() => { hop(); heart(); sparkleBurst(); });
 
   // 알람 순간이동 '뿅'
   window.petAPI?.onPop?.(() => poof());
@@ -785,6 +955,149 @@
   }
   window.petAPI?.onNap?.((on) => setNap(on));
 
+  // ── 기분: 쓰담 반복 시 볼 홍조 + 하트 (love) ──
+  let petCnt = 0, petCntT = 0, loveT = null;
+  function setLove(on, hearts) {
+    pet.classList.toggle('loved', on);
+    if (!moodG) return;
+    while (moodG.firstChild) moodG.removeChild(moodG.firstChild);
+    if (!on) return;
+    for (const [c, r] of curCheeks)      // 볼 홍조
+      rectInto(moodG, curOX + c * curCS - 1, curOY + r * curCS, curCS * 2, curCS * 1.5, 'rgba(255,120,150,.5)');
+    if (hearts) for (const [x, y] of curEyeC) {   // 하트 눈
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', x); t.setAttribute('y', y + curCS);
+      t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', curCS * 3.2);
+      t.setAttribute('fill', '#ff4d6d'); t.setAttribute('class', 'hearteye');
+      t.textContent = '♥';
+      moodG.appendChild(t);
+    }
+  }
+  function petLove() {
+    const now = Date.now();
+    if (now - petCntT > 2500) petCnt = 0;
+    petCntT = now; petCnt++;
+    if (petCnt >= 2) {                     // 2번+ 쓰담 → 홍조/하트, 4번+ → 하트 눈
+      setLove(true, petCnt >= 4); heart();
+      clearTimeout(loveT); loveT = setTimeout(() => setLove(false), 2600);
+    }
+  }
+
+  // ── 졸림(밤·자리비움): 눈 반쯤 감기 + 가끔 하품 ──
+  let drowsy = false, yawnTimer = null, starTimer = null;
+  function setDrowsy(on) {
+    if (on === drowsy) return;
+    drowsy = on;
+    pet.classList.toggle('drowsy', on);
+    if (yawnTimer) { clearInterval(yawnTimer); yawnTimer = null; }
+    if (on) {
+      yawnTimer = setInterval(() => {
+        if (curMode === 'idle' && !pet.classList.contains('napping')) {
+          pet.classList.add('yawn');
+          setTimeout(() => pet.classList.remove('yawn'), 900);
+        }
+      }, 15000 + Math.random() * 9000);
+      starTimer = setInterval(() => spawnEnv('star'), 3800);   // 밤엔 머리 위 반짝 별
+    }
+    if (!on && starTimer) { clearInterval(starTimer); starTimer = null; }
+  }
+  window.petAPI?.onMood?.((m) => setDrowsy(m === 'drowsy'));
+
+  // 놀람: 움찔 + "!" (집어들 때)
+  function surprise() {
+    pet.classList.remove('surprised'); void pet.offsetWidth; pet.classList.add('surprised');
+    setTimeout(() => pet.classList.remove('surprised'), 520);
+    const e = document.createElement('div');
+    e.className = 'excl'; e.textContent = '!';
+    pet.appendChild(e);
+    setTimeout(() => e.remove(), 660);
+  }
+
+  // 앉아 쉬기 → 눕기 / 벽 기대기 (메인이 신호)
+  function setRest(phase) {
+    pet.classList.remove('resting', 'lying', 'lean-l', 'lean-r');
+    if (phase === 'sit') pet.classList.add('resting');
+    else if (phase === 'lie') pet.classList.add('resting', 'lying');
+    else if (phase === 'lean-l') pet.classList.add('lean-l');
+    else if (phase === 'lean-r') pet.classList.add('lean-r');
+    // 'end' → 모두 해제
+  }
+  window.petAPI?.onRest?.((phase) => setRest(phase));
+
+  // 사방으로 튀는 반짝이 (신남/기쁨)
+  function sparkleBurst() {
+    for (let i = 0; i < 6; i++) {
+      const s = document.createElement('div');
+      s.className = 'spark';
+      const a = Math.PI * 2 * i / 6;
+      s.style.setProperty('--dx', (Math.cos(a) * 24).toFixed(1) + 'px');
+      s.style.setProperty('--dy', (Math.sin(a) * 24 - 6).toFixed(1) + 'px');
+      s.style.left = '58px'; s.style.bottom = '62px'; s.textContent = '✦';
+      pet.appendChild(s);
+      setTimeout(() => s.remove(), 470);
+    }
+  }
+  // 간식 냠냠
+  function snack() {
+    const c = document.createElement('div');
+    c.className = 'cookie'; c.textContent = '🍪';
+    c.style.left = '78px'; c.style.bottom = '46px';
+    pet.appendChild(c);
+    pet.classList.add('snacking');
+    setTimeout(() => { pet.classList.remove('snacking'); c.remove(); }, 2200);
+  }
+  // 한방향 반응: 삐짐 / 신남 / 간식
+  function onReact(type) {
+    if (type === 'sulk') { pet.classList.add('sulk'); mark('💢'); setTimeout(() => pet.classList.remove('sulk'), 2600); }
+    else if (type === 'excited') { hop(); heart(); sparkleBurst(); mark('❗'); }
+    else if (type === 'snack') { snack(); }
+  }
+  window.petAPI?.onReact?.((type) => onReact(type));
+
+  // 계절 앰비언트(봄 꽃잎/가을 낙엽) + 저녁 노을
+  let seasonTimer = null, curSeason = '';
+  function spawnAmbient(kind) {
+    const w = document.getElementById('weather');
+    const d = document.createElement('div');
+    d.className = 'petal';
+    d.textContent = kind === 'spring' ? (Math.random() < .5 ? '🌸' : '🌷') : (Math.random() < .5 ? '🍂' : '🍁');
+    d.style.left = (6 + Math.random() * 150) + 'px';
+    d.style.animationDuration = (3.6 + Math.random() * 2).toFixed(1) + 's';
+    w.appendChild(d);
+    setTimeout(() => d.remove(), 6200);
+  }
+  function setAmbient(a) {
+    pet.classList.toggle('glow', !!(a && a.glow));   // 저녁 노을
+    const season = a ? (a.season || '') : '';
+    if (season === curSeason) return;
+    curSeason = season;
+    if (seasonTimer) { clearInterval(seasonTimer); seasonTimer = null; }
+    if (season === 'spring' || season === 'autumn') seasonTimer = setInterval(() => spawnAmbient(season), 3000);
+  }
+  window.petAPI?.onAmbient?.((a) => setAmbient(a));
+
+  // ── 환경 반응: 더위 땀 / 추위 입김+떨기 / 바람 낙엽+휘청 ──
+  let envTimer = null;
+  function spawnEnv(type) {
+    const w = document.getElementById('weather');
+    const d = document.createElement('div');
+    if (type === 'sweat') { d.className = 'sweat'; d.style.left = (74 + Math.random() * 8) + 'px'; d.style.top = '34px'; }
+    else if (type === 'breath') { d.className = 'breath'; d.style.left = '72px'; d.style.top = '52px'; }
+    else if (type === 'leaf') { d.className = 'leaf'; d.textContent = '🍃'; d.style.left = '2px'; d.style.top = (36 + Math.random() * 10) + 'px'; }
+    else if (type === 'note') { d.className = 'note'; d.textContent = Math.random() < 0.5 ? '♪' : '♩'; d.style.left = (70 + Math.random() * 12) + 'px'; d.style.top = '34px'; }
+    else if (type === 'star') { d.className = 'star'; d.textContent = Math.random() < 0.5 ? '✦' : '✧'; d.style.left = (58 + Math.random() * 20) + 'px'; d.style.top = (26 + Math.random() * 8) + 'px'; d.style.color = '#ffe07a'; }
+    w.appendChild(d);
+    setTimeout(() => d.remove(), 2800);
+  }
+  function setEnv(bucket) {
+    pet.classList.remove('env-cold', 'env-wind');
+    if (envTimer) { clearInterval(envTimer); envTimer = null; }
+    if (bucket === 'hot') envTimer = setInterval(() => spawnEnv('sweat'), 1400);
+    else if (bucket === 'cold') { pet.classList.add('env-cold'); envTimer = setInterval(() => spawnEnv('breath'), 2000); }
+    else if (bucket === 'wind') { pet.classList.add('env-wind'); envTimer = setInterval(() => spawnEnv('leaf'), 2200); }
+    else if (bucket === 'clear') envTimer = setInterval(() => { if (curMode === 'idle' && Math.random() < 0.5) spawnEnv('note'); }, 3600);   // 맑으면 콧노래 ♪
+  }
+
   // ── 랜덤 돌발 행동 ──
   function butterfly() {
     const b = document.createElement('div');
@@ -796,10 +1109,20 @@
   }
   function playTrick(type) {
     if (type === 'butterfly') { butterfly(); return; }
-    const cls = { stretch: 'trick-stretch', roll: 'trick-roll', peek: 'trick-peek' }[type];
+    const cls = { stretch: 'trick-stretch', roll: 'trick-roll', peek: 'trick-peek', dance: 'dance', hiccup: 'hiccup' }[type];
     if (!cls) return;
+    const dur = { roll: 1120, dance: 2400, hiccup: 360 }[type] || 1220;
+    if (type === 'hiccup') mark('💢');   // 딸꾹질/재채기 표시
+    if (type === 'dance') { for (let i = 0; i < 3; i++) setTimeout(() => spawnEnv('note'), i * 500); }
     pet.classList.remove(cls); void pet.offsetWidth; pet.classList.add(cls);
-    setTimeout(() => pet.classList.remove(cls), type === 'roll' ? 1120 : 1220);
+    setTimeout(() => pet.classList.remove(cls), dur);
+  }
+  // 머리 위 마크 (?, 💢, ! 등)
+  function mark(ch) {
+    const m = document.createElement('div');
+    m.className = 'mark'; m.textContent = ch;
+    pet.appendChild(m);
+    setTimeout(() => m.remove(), 820);
   }
   window.petAPI?.onTrick?.((type) => playTrick(type));
 
@@ -828,13 +1151,14 @@
     w.innerHTML = '';
     if (bucket === 'rain') { makeParticles(w, 'raindrop', 7); addProp(w, '☂', 'umbrella'); }
     else if (bucket === 'snow') { makeParticles(w, 'snowflake', 9); addProp(w, '⛄', 'snowman'); }
-    // 그 외(맑음/더위/추위/바람/선선)는 오버레이 없음
+    setEnv(bucket);   // 더위 땀 / 추위 입김·떨기 / 바람 낙엽·휘청 (그 외엔 해제)
   }
   window.petAPI?.onWeather?.((bucket) => setWeather(bucket || ''));
 
   // 쉬는 동안 가끔 깡총/하트 (말풍선 텍스트는 메인이 성격대로 전송)
   setInterval(() => {
-    if (curMode === 'idle' && !pet.classList.contains('napping') && Math.random() < 0.12) {
+    if (curMode === 'idle' && !pet.classList.contains('napping')
+        && !pet.classList.contains('resting') && Math.random() < 0.12) {
       hop(); if (Math.random() < 0.5) heart();
     }
   }, 5000);

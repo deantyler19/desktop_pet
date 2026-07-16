@@ -734,6 +734,8 @@ let PROFILE_FILE, profile = { name: '', birthday: '' };   // 애칭 + 생일
 let settingsWin = null;
 let away = false;            // 자리비움(낮잠) 상태
 let lastPerchSay = 0;        // 창 위 올라앉았을 때 반응 쿨다운
+let resting = false, restStart = 0, restUntil = 0, restPhase = '';   // 오래 가만히 있으면 앉아 쉬기→눕기
+let awayStart = 0;           // 자리비움 시작 시각 (오래 비우면 복귀 시 삐짐)
 
 function feet() { return petY + WIN_H - FEET; }
 function cx() { return petX + PET_W / 2; }   // 펫 시각 중심 (펫은 창 왼쪽)
@@ -805,36 +807,60 @@ function checkAway() {
   let idle = 0;
   try { idle = powerMonitor.getSystemIdleTime(); } catch { return; }
   if (!away && idle >= AWAY_SEC && grounded) {
-    away = true; mode = 'idle';
+    endRest();
+    away = true; awayStart = Date.now(); mode = 'idle';
     if (win && !win.isDestroyed()) win.webContents.send('pet-nap', true);
     tell('idle');
   } else if (away && idle < AWAY_SEC) {
     away = false;
     if (win && !win.isDestroyed()) win.webContents.send('pet-nap', false);
     grounded = false;   // 다시 자리잡기
-    setTimeout(() => { if (!away) { petSay(pick(WELCOME_BACK)); petCheer(); } }, 350);
+    const longGone = Date.now() - awayStart > 30 * 60 * 1000;   // 30분 넘게 비우면 삐짐
+    setTimeout(() => {
+      if (away) return;
+      if (longGone) { sendReact('sulk'); petSay(pick(['어디 갔다 이제 와... 삐졌어 💢', '흥! 오래 걸렸네', '한참 기다렸잖아~'])); }
+      else { petSay(pick(WELCOME_BACK)); petCheer(); }
+    }, 350);
   }
 }
 
 // ── 랜덤 돌발 행동 (기지개/데굴데굴/두리번/나비 쫓기) ──
-const TRICKS = ['stretch', 'roll', 'peek', 'butterfly'];
+const TRICKS = ['stretch', 'roll', 'peek', 'butterfly', 'dance', 'hiccup'];
 const TRICK_SAY = {
   stretch: ['으-쌰, 기지개~ 🙆', '쭈욱... 시원하다', '몸 좀 풀어야지'],
   roll: ['데굴데굴~', '구르기 최고 ㅋ', '심심해서 굴러봤어'],
   peek: ['어? 뭐 있나?', '두리번두리번 👀', '누가 부른 것 같은데'],
   butterfly: ['어! 나비다 🦋', '기다려~ 잡을 거야!', '팔랑팔랑 예쁘다'],
+  dance: ['룰루랄라~ 🎵', '나만의 댄스타임!', '흥이 넘쳐 ♪', '같이 출래?'],
+  hiccup: ['딸꾹!', '엣취! 🤧', '어이쿠, 딸꾹질이야', '흠칫!'],
 };
 function doTrick() {
-  if (!grounded || paused || locked || alarming || away || dragging || hovering) return;
+  if (!grounded || paused || locked || alarming || away || resting || dragging || hovering) return;
   if (mode !== 'idle' && mode !== 'walk') return;
   const t = pick(TRICKS);
-  mode = 'idle'; idleUntil = Date.now() + 2000;   // 재주 부리는 동안 제자리
+  const dur = t === 'dance' ? 2600 : (t === 'hiccup' ? 500 : 2000);
+  mode = 'idle'; idleUntil = Date.now() + dur;   // 재주 부리는 동안 제자리
   if (win && !win.isDestroyed()) win.webContents.send('pet-trick', t);
   if (Math.random() < 0.7) petSay(pick(TRICK_SAY[t]));
 }
 
 // 현재 날씨 버킷을 렌더러로 (비=우산, 눈=눈사람 등 시각 연출용)
 function sendWeather() { if (win && !win.isDestroyed()) win.webContents.send('pet-weather', weatherBucket); }
+// 졸림 상태(밤이면 졸린 눈)를 렌더러로
+function sendMood() { if (win && !win.isDestroyed()) win.webContents.send('pet-mood', sleepy ? 'drowsy' : 'awake'); }
+// 한방향 반응(삐짐/신남/간식) + 계절·노을 앰비언트
+function sendReact(type) { if (win && !win.isDestroyed()) win.webContents.send('pet-react', type); }
+function seasonOf(m) { return (m >= 3 && m <= 5) ? 'spring' : (m >= 9 && m <= 11) ? 'autumn' : ''; }
+function sendAmbient() {
+  if (!win || win.isDestroyed()) return;
+  win.webContents.send('pet-ambient', { season: seasonOf(new Date().getMonth() + 1), glow: lastPeriod === 'evening' });
+}
+// 벽에 기대 쉬기 (화면 끝에서)
+function startLean(side) {
+  resting = true; restStart = Date.now(); restUntil = restStart + 7000 + Math.random() * 5000;
+  restPhase = 'lean'; mode = 'idle';
+  sendRest(side === 'L' ? 'lean-l' : 'lean-r');
+}
 
 // 낮잠 즉시 깨우기 (드래그/쓰다듬기 등 직접 상호작용 시)
 function wake() {
@@ -842,6 +868,11 @@ function wake() {
   away = false;
   if (win && !win.isDestroyed()) win.webContents.send('pet-nap', false);
 }
+
+// 앉아 쉬기 → 눕기 (오래 가만히 있을 때)
+function sendRest(phase) { if (win && !win.isDestroyed()) win.webContents.send('pet-rest', phase); }
+function startRest() { resting = true; restStart = Date.now(); restUntil = restStart + 9000 + Math.random() * 6000; restPhase = 'sit'; sendRest('sit'); }
+function endRest() { if (!resting) return; resting = false; restPhase = ''; sendRest('end'); mode = 'walk'; dir = Math.random() < 0.5 ? -1 : 1; }
 
 // ── 시간대 / 특별한 날 ──────────────────────────
 let lastPeriod = '', lastEventDay = '';
@@ -859,13 +890,15 @@ function periodOf(h) {
 function checkTime() {
   const d = new Date(), h = d.getHours();
   sleepy = (h >= 23 || h < 6);
+  sendMood();   // 밤이면 졸린 눈 연출
   const p = periodOf(h);
   if (p !== lastPeriod) {
     lastPeriod = p;
-    if (p === 'morning') personaSay('morning');
+    if (p === 'morning') { personaSay('morning'); if (win && !win.isDestroyed()) setTimeout(() => win.webContents.send('pet-trick', 'stretch'), 1200); }   // 아침 기지개
     else if (p === 'night') personaSay('night');
     else petSay(PERIOD_MSG[p]);
   }
+  sendAmbient();   // 계절 꽃잎·낙엽 + 저녁 노을
   const md = (d.getMonth() + 1) + '-' + d.getDate(), dayKey = d.toDateString();
   // 생일 우선 (프로필에 저장된 'YYYY-MM-DD' → 'M-D' 비교)
   if (profile.birthday && mdOf(profile.birthday) === md && lastEventDay !== dayKey) {
@@ -943,6 +976,7 @@ function checkAlarm() {
     saveAlarms();
     activeAlarmText = a.text || '알람!';
     if (away) { away = false; if (win && !win.isDestroyed()) win.webContents.send('pet-nap', false); }   // 자다가도 알람엔 깸
+    endRest();   // 쉬다가도 알람엔 일어남
     preAlarmX = petX; preAlarmY = petY;          // 현재 위치 기억(끄면 복귀)
     alarming = true; lastAlarmSay = 0; alarmPopped = false;
     break;
@@ -1057,21 +1091,29 @@ function tick() {
   if (!sup) { grounded = false; vy = 0; vx = 0; tell('fall'); return; }
   petY = sup.top - (WIN_H - FEET);
 
-  if (hovering) { tell('idle'); setPos(); return; }   // 마우스 올리면 그 자리에 멈춤
+  if (hovering) { if (resting) endRest(); tell('idle'); setPos(); return; }   // 마우스 올리면 멈춤(쉬는 중이면 일어남)
 
   if (mode === 'idle') {
     tell('idle');
+    if (resting) {                                   // 쉬는 중: 제자리 유지, 시간 지나면 눕기→종료
+      if (restPhase === 'sit' && Date.now() - restStart > 3500) { restPhase = 'lie'; sendRest('lie'); }
+      if (Date.now() > restUntil) endRest();
+      setPos(); return;
+    }
     if (Date.now() > idleUntil) {
-      if (!sleepy && Math.random() < 0.15) jump();
+      if (!sleepy && !away && Math.random() < 0.03) startRest();   // 가끔 앉아 쉬기
+      else if (!sleepy && Math.random() < 0.15) jump();
       else { mode = 'walk'; dir = Math.random() < 0.5 ? -1 : 1; }
     }
     setPos(); return;
   }
 
   if (petX <= minX + 1 && dir < 0) {
+    if (!sleepy && Math.random() < 0.22) { petX = minX; startLean('L'); tell('idle'); setPos(); return; }   // 왼벽에 기대 쉬기
     if (Math.random() < T.climb) { mode = 'climb'; climbSide = 'L'; grounded = false; petX = minX; tell('climb'); setPos(); return; }
     dir = 1;
   } else if (petX >= xEdge - 1 && dir > 0) {
+    if (!sleepy && Math.random() < 0.22) { petX = xEdge; startLean('R'); tell('idle'); setPos(); return; }   // 오른벽에 기대 쉬기
     if (Math.random() < T.climb) { mode = 'climb'; climbSide = 'R'; grounded = false; petX = xEdge; tell('climb'); setPos(); return; }
     dir = -1;
   }
@@ -1149,6 +1191,7 @@ function menuTemplate() {
         },
         { label: '오늘의 운세 🔮', click: () => sayFortune() },
         { label: '명언 한마디 📜', click: () => sayQuote() },
+        { label: '간식 주기 🍪', click: () => { endRest(); wake(); sendReact('snack'); petSay(pick(['냠냠 맛있어! 🍪', '와 간식이다!', '고마워, 잘 먹을게~', '헤헤 최고야 💕'])); } },
       ],
     },
     { type: 'separator' },
@@ -1197,7 +1240,7 @@ ipcMain.on('show-context-menu', () => {
 });
 
 // ── 드래그 ──────────────────────────────────────
-ipcMain.on('drag-start', () => { wake(); dragging = true; dragMoved = false; mode = 'walk'; grounded = false; vy = 0; vx = 0; tell('held'); });
+ipcMain.on('drag-start', () => { wake(); endRest(); dragging = true; dragMoved = false; mode = 'walk'; grounded = false; vy = 0; vx = 0; tell('held'); });
 ipcMain.on('drag-move', (_e, pos) => {
   if (!dragging) return;
   if (!dragMoved) { dragMoved = true; personaSay('grab'); }   // 실제로 옮기기 시작할 때 한 번
@@ -1229,7 +1272,7 @@ ipcMain.on('mouse-ignore', (_e, on) => {
 });
 ipcMain.on('pet-petted', () => {
   if (alarming) { stopAlarm(); return; }   // 알람 중엔 터치 = 알람 끄기
-  wake();                                   // 자고 있었으면 깨우기
+  wake(); endRest();                        // 자고 있었으면 깨우기 / 쉬는 중이면 일어남
   if (grounded) { mode = 'idle'; idleUntil = Date.now() + 1800; }
   const now = Date.now();
   if (now - lastPetSayT > 1500) { lastPetSayT = now; personaSay(Math.random() < 0.7 ? 'pet' : 'happy'); }
@@ -1250,6 +1293,9 @@ function createWindow() {
   win.webContents.on('did-finish-load', () => {
     win.webContents.send('set-skin', skin);
     sendWeather();                  // 재로딩 후에도 날씨 연출 복구
+    sendMood();                     // 졸림 상태 복구
+    sendAmbient();                  // 계절·노을 복구
+    resting = false;                // 재로딩 시 휴식 상태 초기화 (렌더러와 동기화)
     if (!started) {                 // 게임 루프/타이머는 최초 1회만
       started = true;
       startRoaming();
