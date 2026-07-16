@@ -204,23 +204,24 @@
   // 공통 문자: O=외곽선, 1=몸 기본, H=하이라이트, D=그림자, W=눈 흰자/반짝, K=눈동자
   // 눈동자를 오른쪽에 배치해 기본(오른쪽 이동) 방향을 바라봄 — 왼쪽 이동 시 flip으로 일치
   const SKINS = {
+    // 기본(곰돌이): 노란 곰 + 빨간 셔츠 + 작은 귀 + 코 (곰돌이 푸 느낌의 오리지널 도트)
     claude: {
       s: 4,
-      pal: { O: '#7a3a20', 1: '#c05e3b', H: '#d5825c', D: '#a54c2d', W: '#ffffff', K }, eyelid: '#c05e3b',
+      pal: { O: '#6b4e12', 1: '#f5c542', H: '#ffdd6b', D: '#e0a92e', 2: '#d33f2f', r: '#a32e22', 3: '#3a2a15', W: '#ffffff', K }, eyelid: '#f5c542',
       grid: [
-        ".....OOOOOOOOOOO.....",
-        "...OOHHHHHHHHHHHOO...",
+        "...OO...........OO...",
+        "..O11O.........O11O..",
+        "..OOOOOOOOOOOOOOOOO..",
         "..OHHHHHHHHHHHHHHHO..",
         "..OH1111111111111HO..",
-        "..O11WWWW111WWWW11O..",
         "..O11WKKW111WKKW11O..",
         "..O11WKKW111WKKW11O..",
+        "..O111111333111111O..",
+        "..O111111131111111O..",
         "..O111111111111111O..",
-        "OOO111D1111111D111OOO",
-        "11O1111DDDDDDD1111O11",
-        "OOO111111111111111OOO",
-        "..OD1111111111111DO..",
-        "..ODDDDDDDDDDDDDDDO..",
+        "..O222222222222222O..",
+        "..O222222222222222O..",
+        "..O2rrrrrrrrrrrrr2O..",
         "...OOOOOOOOOOOOOOO...",
         "......O1O...O1O......",
         "......O1O...O1O......",

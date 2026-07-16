@@ -84,7 +84,7 @@ function migrateAlarms(raw) {
 }
 
 const SKIN_LIST = [
-  { id: 'claude', label: '클로드 (기본)' },
+  { id: 'claude', label: '기본 (곰돌이)' },
   { id: 'cat', label: '고양이' },
   { id: 'dog', label: '강아지' },
   { id: 'rabbit', label: '토끼' },
